@@ -7,7 +7,10 @@ from src.notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
     classify_notification_priority,
+    count_notification_priorities,
+    load_notification_outbox,
     notification_payloads,
+    summarize_notification_payloads,
     write_notification_outbox,
 )
 
@@ -136,3 +139,41 @@ def test_write_notification_outbox_exports_jsonl(tmp_path) -> None:
 
 def test_notification_payloads_returns_empty_for_no_candidates() -> None:
     assert notification_payloads(pd.DataFrame()) == []
+
+
+def test_load_and_summarize_notification_outbox(tmp_path) -> None:
+    notifications = pd.DataFrame(
+        [
+            {
+                "ETF": "BBB",
+                "優先度": "Medium",
+                "カテゴリ": "監視強化",
+                "現在価格": 100.0,
+                "シグナル": "見送り",
+                "理由": "ETFスコア70超え",
+                "推奨行動": "監視",
+                "目標価格": 120.0,
+                "停止価格": 90.0,
+                "RR": 1.0,
+            },
+            {
+                "ETF": "AAA",
+                "優先度": "High",
+                "カテゴリ": "停止価格接近",
+                "現在価格": 80.0,
+                "シグナル": "売却候補",
+                "理由": "停止価格に接近",
+                "推奨行動": "リスク削減",
+                "目標価格": 100.0,
+                "停止価格": 82.0,
+                "RR": 0.5,
+            },
+        ]
+    )
+    path = write_notification_outbox(notifications, output_dir=tmp_path)
+    payloads = load_notification_outbox(path)
+    counts = count_notification_priorities(payloads)
+    summary = summarize_notification_payloads(payloads)
+    assert counts.set_index("優先度").loc["High", "件数"] == 1
+    assert counts.set_index("優先度").loc["Medium", "件数"] == 1
+    assert summary.iloc[0]["ETF"] == "AAA"

@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from src.report_engine import write_portfolio_check_report, write_replay_pdca_report
+from src.report_engine import write_notification_summary_report, write_portfolio_check_report, write_replay_pdca_report
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:
@@ -94,3 +94,23 @@ def test_write_portfolio_check_report_marks_errors(tmp_path) -> None:
     text = output_path.read_text(encoding="utf-8")
     assert "判定: 要修正" in text
     assert "数値として読めません" in text
+
+
+def test_write_notification_summary_report_lists_priority_counts(tmp_path) -> None:
+    counts = pd.DataFrame([{"優先度": "High", "件数": 1}])
+    summary = pd.DataFrame(
+        [
+            {
+                "優先度": "High",
+                "ETF": "SMH",
+                "カテゴリ": "買い価格接近",
+                "シグナル": "買い候補",
+                "理由": "第1買い価格に接近",
+                "推奨行動": "第1買い条件を確認",
+            }
+        ]
+    )
+    output_path = write_notification_summary_report(counts, summary, output_dir=tmp_path, report_date=datetime(2026, 6, 8))
+    text = output_path.read_text(encoding="utf-8")
+    assert "## 優先度別件数" in text
+    assert "SMH" in text

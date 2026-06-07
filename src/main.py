@@ -33,6 +33,9 @@ from .indicators import add_indicators, latest_metrics
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
+    count_notification_priorities,
+    load_notification_outbox,
+    summarize_notification_payloads,
     write_notification_outbox,
 )
 from .pdca_engine import (
@@ -55,6 +58,7 @@ from .report_engine import (
     write_backtest_report,
     write_daily_report,
     write_notification_report,
+    write_notification_summary_report,
     write_portfolio_check_report,
     write_parameter_search_report,
     write_regime_validation_report,
@@ -831,6 +835,20 @@ def run_portfolio_check() -> None:
     print(f"保有CSVチェックレポートを作成しました: {output_path}")
 
 
+def run_notification_summary() -> None:
+    setup_logging()
+    outbox_files = sorted((PROJECT_ROOT / "data" / "processed" / "notifications").glob("notification_outbox_*.jsonl"))
+    if not outbox_files:
+        raise FileNotFoundError("通知アウトボックスがありません。先に daily を実行してください。")
+    latest_outbox = outbox_files[-1]
+    payloads = load_notification_outbox(latest_outbox)
+    priority_counts = count_notification_priorities(payloads)
+    notification_summary = summarize_notification_payloads(payloads)
+    output_path = write_notification_summary_report(priority_counts, notification_summary)
+    logging.getLogger(__name__).info("Notification summary report written: %s", output_path)
+    print(f"通知要約レポートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1204,6 +1222,7 @@ def main() -> None:
             "audit",
             "weekly",
             "portfolio-check",
+            "notification-summary",
             "replay",
             "replay-quick",
         ],
@@ -1222,6 +1241,8 @@ def main() -> None:
         run_weekly()
     elif args.command == "portfolio-check":
         run_portfolio_check()
+    elif args.command == "notification-summary":
+        run_notification_summary()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

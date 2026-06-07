@@ -171,6 +171,32 @@ def write_notification_report(
     return output_path
 
 
+def write_notification_summary_report(
+    priority_counts: pd.DataFrame,
+    notification_summary: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"notification_summary_{date:%Y-%m-%d}.md"
+    counts_text = priority_counts.to_markdown(index=False) if not priority_counts.empty else "通知候補なし"
+    summary_text = notification_summary.to_markdown(index=False) if not notification_summary.empty else "通知候補なし"
+    content = [
+        f"# notification_summary {date:%Y-%m-%d}",
+        "",
+        "通知アウトボックスを送信前に確認するための要約です。外部送信は行いません。",
+        "",
+        "## 優先度別件数",
+        counts_text,
+        "",
+        "## 送信前確認リスト",
+        summary_text,
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_portfolio_check_report(
     issues: pd.DataFrame,
     output_dir: str | Path = "reports/daily",

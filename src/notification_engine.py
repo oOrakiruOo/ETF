@@ -192,3 +192,46 @@ def write_notification_outbox(
     lines = [json.dumps(payload, ensure_ascii=False) for payload in payloads]
     output_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
     return output_path
+
+
+def load_notification_outbox(path: str | Path) -> list[dict[str, object]]:
+    file_path = PROJECT_ROOT / path if not Path(path).is_absolute() else Path(path)
+    if not file_path.exists():
+        return []
+    payloads: list[dict[str, object]] = []
+    for line in file_path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            payloads.append(json.loads(line))
+    return payloads
+
+
+def summarize_notification_payloads(payloads: list[dict[str, object]], top_n: int = 10) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    priority_order = {"High": 0, "Medium": 1, "Low": 2}
+    sorted_payloads = sorted(
+        payloads,
+        key=lambda payload: (
+            priority_order.get(str(payload.get("priority", "")), 9),
+            str(payload.get("ticker", "")),
+        ),
+    )
+    for payload in sorted_payloads[:top_n]:
+        rows.append(
+            {
+                "優先度": payload.get("priority", ""),
+                "ETF": payload.get("ticker", ""),
+                "カテゴリ": payload.get("category", ""),
+                "シグナル": payload.get("signal", ""),
+                "理由": payload.get("reason", ""),
+                "推奨行動": payload.get("action", ""),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def count_notification_priorities(payloads: list[dict[str, object]]) -> pd.DataFrame:
+    counts: dict[str, int] = {"High": 0, "Medium": 0, "Low": 0}
+    for payload in payloads:
+        priority = str(payload.get("priority", ""))
+        counts[priority] = counts.get(priority, 0) + 1
+    return pd.DataFrame([{"優先度": priority, "件数": count} for priority, count in counts.items() if count > 0])
