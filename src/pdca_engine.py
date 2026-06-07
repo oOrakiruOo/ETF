@@ -30,6 +30,13 @@ AVOID_OUTCOME_COLUMNS = [
     "reason",
 ]
 
+AVOID_POLICY_SIGNALS = {
+    "current_all_avoid": {"見送り", "リスク削減", "売却候補"},
+    "sell_only": {"売却候補"},
+    "avoid_only": {"見送り"},
+    "no_sell_candidate_avoid": {"見送り", "リスク削減"},
+}
+
 
 def propose_pdca_action(benchmark_outperformed: bool, false_positive_count: int) -> list[str]:
     proposals: list[str] = []
@@ -265,7 +272,17 @@ def summarize_virtual_trades(virtual_trades: pd.DataFrame) -> pd.DataFrame:
 def evaluate_avoid_outcomes(signal_history: pd.DataFrame, horizon_days: int = 20) -> pd.DataFrame:
     if signal_history.empty:
         return pd.DataFrame(columns=AVOID_OUTCOME_COLUMNS)
-    avoid_signals = {"見送り", "リスク削減", "売却候補"}
+    avoid_signals = AVOID_POLICY_SIGNALS["current_all_avoid"]
+    return evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals, horizon_days)
+
+
+def evaluate_avoid_outcomes_for_signals(
+    signal_history: pd.DataFrame,
+    avoid_signals: set[str],
+    horizon_days: int = 20,
+) -> pd.DataFrame:
+    if signal_history.empty:
+        return pd.DataFrame(columns=AVOID_OUTCOME_COLUMNS)
     rows: list[dict[str, object]] = []
     for row in signal_history.to_dict("records"):
         signal = str(row.get("判定", ""))
@@ -346,14 +363,8 @@ def summarize_avoid_outcomes_by_signal(avoid_outcomes: pd.DataFrame) -> pd.DataF
 def run_avoid_policy_search(avoid_outcomes: pd.DataFrame) -> pd.DataFrame:
     if avoid_outcomes.empty:
         return pd.DataFrame()
-    policies = {
-        "current_all_avoid": {"見送り", "リスク削減", "売却候補"},
-        "sell_only": {"売却候補"},
-        "avoid_only": {"見送り"},
-        "no_sell_candidate_avoid": {"見送り", "リスク削減"},
-    }
     rows: list[dict[str, object]] = []
-    for policy_name, signals in policies.items():
+    for policy_name, signals in AVOID_POLICY_SIGNALS.items():
         subset = avoid_outcomes[avoid_outcomes["判定"].isin(signals)]
         summary = summarize_avoid_outcomes(subset).iloc[0]
         correct_rate = summary.get("正解率", None)

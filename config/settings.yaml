@@ -20,7 +20,15 @@ scoring:
   theme_weight: 20
 
 theme_risk:
-  overlay_mode: balanced
+  overlay_mode: high_only
+
+trade_plan:
+  entry_multiplier: 1.04
+  stop_multiplier: 0.95
+  target_multiplier: 1.0
+
+pdca:
+  avoid_policy: sell_only
 
 report:
   top_n: 14

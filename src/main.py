@@ -32,7 +32,9 @@ from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
 from .notification_engine import build_notification_candidates, build_portfolio_notification_candidates
 from .pdca_engine import (
+    AVOID_POLICY_SIGNALS,
     evaluate_avoid_outcomes,
+    evaluate_avoid_outcomes_for_signals,
     evaluate_signal_history,
     evaluate_virtual_trades,
     propose_signal_improvements,
@@ -72,6 +74,29 @@ def theme_risk_overlay_mode_from_settings(settings: dict[str, object]) -> str:
     return str(theme_risk_settings.get("overlay_mode", "balanced"))
 
 
+def trade_plan_multipliers_from_settings(settings: dict[str, object]) -> dict[str, float]:
+    trade_plan_settings = settings.get("trade_plan", {})
+    if not isinstance(trade_plan_settings, dict):
+        return {"entry_multiplier": 1.0, "stop_multiplier": 1.0, "target_multiplier": 1.0}
+    return {
+        "entry_multiplier": float(trade_plan_settings.get("entry_multiplier", 1.0) or 1.0),
+        "stop_multiplier": float(trade_plan_settings.get("stop_multiplier", 1.0) or 1.0),
+        "target_multiplier": float(trade_plan_settings.get("target_multiplier", 1.0) or 1.0),
+    }
+
+
+def avoid_policy_name_from_settings(settings: dict[str, object]) -> str:
+    pdca_settings = settings.get("pdca", {})
+    if not isinstance(pdca_settings, dict):
+        return "current_all_avoid"
+    policy_name = str(pdca_settings.get("avoid_policy", "current_all_avoid"))
+    return policy_name if policy_name in AVOID_POLICY_SIGNALS else "current_all_avoid"
+
+
+def avoid_signals_from_settings(settings: dict[str, object]) -> set[str]:
+    return AVOID_POLICY_SIGNALS[avoid_policy_name_from_settings(settings)]
+
+
 def load_strategy_config(profile_name: str = DEFAULT_STRATEGY_PROFILE) -> tuple[BacktestConfig, str]:
     profiles = load_yaml("config/strategy_profiles.yaml").get("profiles", {})
     if not isinstance(profiles, dict) or profile_name not in profiles:
@@ -99,6 +124,7 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
     universe = load_yaml("config/etf_universe.yaml")
     theme_map_config = load_yaml("config/theme_map.yaml")
     theme_risk_mode = theme_risk_overlay_mode_from_settings(settings)
+    trade_plan_multipliers = trade_plan_multipliers_from_settings(settings)
     strategy_config, _description = load_strategy_config(profile_name)
     entries = flatten_universe(universe)
     tickers = sorted({entry["ticker"] for entry in entries} | {"SPY", "QQQ"})
@@ -129,7 +155,7 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
         theme_score = theme_scores.get(theme, 60.0)
         score_parts = calculate_etf_score(metrics, theme_score)
         stage = classify_theme_stage(metrics, theme_score)
-        trade_plan = calculate_trade_plan(metrics)
+        trade_plan = calculate_trade_plan(metrics, **trade_plan_multipliers)
         signal = decide_signal(score_parts["total"], theme_score, stage, metrics, trade_plan)
         theme_risk = theme_risks.get(theme, {})
         risk_bucket = str(theme_risk.get("リスク区分", "低"))
@@ -207,7 +233,9 @@ def build_signal_rows_for_metrics(
     metrics_by_ticker: dict[str, dict[str, float]],
     apply_theme_risk: bool = True,
     theme_risk_mode: str = "balanced",
+    trade_plan_multipliers: dict[str, float] | None = None,
 ) -> list[dict[str, object]]:
+    trade_plan_multipliers = trade_plan_multipliers or {}
     themes = theme_map_config["themes"]
     if not isinstance(themes, dict):
         raise ValueError("theme_map.yaml themes must be a mapping")
@@ -224,7 +252,7 @@ def build_signal_rows_for_metrics(
         theme_score = theme_scores.get(theme, 60.0)
         score_parts = calculate_etf_score(metrics, theme_score)
         stage = classify_theme_stage(metrics, theme_score)
-        trade_plan = calculate_trade_plan(metrics)
+        trade_plan = calculate_trade_plan(metrics, **trade_plan_multipliers)
         signal = decide_signal(score_parts["total"], theme_score, stage, metrics, trade_plan)
         theme_risk = theme_risks.get(theme, {})
         risk_bucket = str(theme_risk.get("リスク区分", "低"))
@@ -273,6 +301,7 @@ def build_historical_signal_history(
     snapshot_dates: list[pd.Timestamp],
     apply_theme_risk: bool = True,
     theme_risk_mode: str = "balanced",
+    trade_plan_multipliers: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     for snapshot_date in snapshot_dates:
@@ -290,6 +319,7 @@ def build_historical_signal_history(
             metrics_by_ticker,
             apply_theme_risk,
             theme_risk_mode,
+            trade_plan_multipliers,
         )
         if not rows:
             continue
@@ -752,6 +782,9 @@ def load_recent_signal_history(limit: int = 7) -> pd.DataFrame:
 
 def run_weekly() -> None:
     setup_logging()
+    settings = load_yaml("config/settings.yaml")
+    avoid_policy_name = avoid_policy_name_from_settings(settings)
+    avoid_signals = avoid_signals_from_settings(settings)
     backtest_summary = latest_csv("backtest_summary_*.csv")
     parameter_results = latest_csv("parameter_search_*.csv")
     regime_validation = latest_csv("regime_validation_*.csv")
@@ -761,7 +794,7 @@ def run_weekly() -> None:
     signal_improvement_proposals = propose_signal_improvements(signal_accuracy)
     virtual_trades = evaluate_virtual_trades(signal_history)
     virtual_trade_summary = summarize_virtual_trades(virtual_trades)
-    avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
     output_path = write_weekly_pdca_report(
         backtest_summary,
@@ -775,6 +808,7 @@ def run_weekly() -> None:
         virtual_trade_summary,
         avoid_outcomes,
         avoid_summary,
+        avoid_policy_name,
     )
     logging.getLogger(__name__).info("Weekly report written: %s", output_path)
     print(f"週次PDCAレポートを作成しました: {output_path}")
@@ -787,6 +821,9 @@ def run_replay(refresh: bool = False) -> None:
     universe = load_yaml("config/etf_universe.yaml")
     theme_map_config = load_yaml("config/theme_map.yaml")
     theme_risk_mode = theme_risk_overlay_mode_from_settings(settings)
+    trade_plan_multipliers = trade_plan_multipliers_from_settings(settings)
+    avoid_policy_name = avoid_policy_name_from_settings(settings)
+    avoid_signals = avoid_signals_from_settings(settings)
     entries = flatten_universe(universe)
     satellite_tickers = [entry["ticker"] for entry in entries if entry["bucket"] == "satellite"]
     tickers = sorted({entry["ticker"] for entry in entries} | {"SPY", "QQQ"})
@@ -808,6 +845,7 @@ def run_replay(refresh: bool = False) -> None:
         enriched,
         snapshot_dates,
         theme_risk_mode=theme_risk_mode,
+        trade_plan_multipliers=trade_plan_multipliers,
     )
     baseline_signal_history = build_historical_signal_history(
         entries,
@@ -815,7 +853,9 @@ def run_replay(refresh: bool = False) -> None:
         enriched,
         snapshot_dates,
         apply_theme_risk=False,
+        trade_plan_multipliers=trade_plan_multipliers,
     )
+    logger.info("Replay signal histories built: overlay=%s baseline=%s", len(signal_history), len(baseline_signal_history))
     evaluated_signals = evaluate_signal_history(signal_history)
     baseline_evaluated_signals = evaluate_signal_history(baseline_signal_history)
     signal_accuracy = summarize_signal_accuracy(evaluated_signals)
@@ -851,11 +891,13 @@ def run_replay(refresh: bool = False) -> None:
         relaxed_overlay_signal_history,
     )
     theme_risk_policy_mode_results = run_theme_risk_policy_mode_search(baseline_signal_history)
-    avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    all_avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
     entry_parameter_results = run_entry_parameter_search(signal_history)
     avoid_by_signal = summarize_avoid_outcomes_by_signal(avoid_outcomes)
-    avoid_policy_results = run_avoid_policy_search(avoid_outcomes)
+    avoid_policy_results = run_avoid_policy_search(all_avoid_outcomes)
+    logger.info("Replay PDCA base evaluations complete")
     strategy_config, _description = load_strategy_config(DEFAULT_STRATEGY_PROFILE)
     signal_curve, signal_diagnostics = run_signal_execution_backtest(
         prices,
@@ -868,6 +910,7 @@ def run_replay(refresh: bool = False) -> None:
         int(signal_diagnostics.iloc[0]["trade_count"]) if not signal_diagnostics.empty else 0,
     )
     signal_execution_grid = run_signal_execution_grid_search(prices, signal_history)
+    logger.info("Replay signal execution checks complete")
     hybrid_curve, hybrid_diagnostics = run_hybrid_rotation_signal_backtest(
         prices,
         enriched,
@@ -882,6 +925,7 @@ def run_replay(refresh: bool = False) -> None:
             hybrid_diagnostics.iloc[0]["signal_exit_count"]
         )
     hybrid_summary = build_benchmark_summary(hybrid_curve, prices, hybrid_trade_count)
+    logger.info("Replay hybrid base backtest complete")
     hybrid_grid = run_hybrid_signal_grid_search(
         prices,
         enriched,
@@ -895,26 +939,35 @@ def run_replay(refresh: bool = False) -> None:
         max_positions_list=[2],
         candidate_policies=["watch_score_gate", "score_gate"],
         min_score_thresholds=[65.0, 70.0],
-        min_rr_values=[1.5, 2.0],
+        min_rr_values=[1.0, 1.5, 2.0],
         acceleration_overlay_modes=["normal"],
     )
+    logger.info("Replay hybrid grid search complete")
     hybrid_rule_search_config = HybridSignalConfig(
         signal_overlay_weight=0.15,
-        entry_multiplier=1.06,
+        entry_multiplier=1.04,
         stop_multiplier=0.95,
         max_holding_days=40,
         max_signal_positions=2,
         candidate_policy="watch_score_gate",
-        min_etf_score=65.0,
-        min_theme_score=65.0,
-        min_rr=2.0,
+        min_etf_score=70.0,
+        min_theme_score=70.0,
+        min_rr=1.0,
         acceleration_overlay_mode="normal",
+        relaxed_signal_tickers=("SMH", "SOXX"),
+        relaxed_min_etf_score=65.0,
+        relaxed_min_theme_score=65.0,
+        relaxed_min_rr=1.0,
     )
     hybrid_regime_config = copy_hybrid_signal_config(
         hybrid_rule_search_config,
         max_entry_day_loss_pct=-3.0,
         ticker_min_etf_scores={"URA": 75.0},
         ticker_min_rr_values={"URA": 2.5},
+    )
+    hybrid_ticker_rule_config = copy_hybrid_signal_config(
+        hybrid_rule_search_config,
+        max_entry_day_loss_pct=-3.0,
     )
     hybrid_trade_log_records: list[dict[str, object]] = []
     run_hybrid_rotation_signal_backtest(
@@ -958,7 +1011,7 @@ def run_replay(refresh: bool = False) -> None:
         satellite_tickers,
         signal_history,
         strategy_config,
-        hybrid_rule_search_config,
+        hybrid_ticker_rule_config,
     )
     hybrid_theme_risk_mode_results = run_theme_risk_hybrid_mode_search(
         prices,
@@ -968,6 +1021,7 @@ def run_replay(refresh: bool = False) -> None:
         strategy_config,
         hybrid_regime_config,
     )
+    logger.info("Replay hybrid follow-up checks complete")
     output_path = write_replay_pdca_report(
         signal_history,
         signal_accuracy,
@@ -996,6 +1050,8 @@ def run_replay(refresh: bool = False) -> None:
         relaxed_theme_risk_overlay_blocks,
         hybrid_trade_log,
         hybrid_attribution_2024,
+        trade_plan_multipliers,
+        avoid_policy_name,
     )
     logger.info("Replay PDCA report written: %s", output_path)
     print(f"履歴再生PDCAレポートを作成しました: {output_path}")
@@ -1008,6 +1064,9 @@ def run_replay_quick(refresh: bool = False) -> None:
     universe = load_yaml("config/etf_universe.yaml")
     theme_map_config = load_yaml("config/theme_map.yaml")
     theme_risk_mode = theme_risk_overlay_mode_from_settings(settings)
+    trade_plan_multipliers = trade_plan_multipliers_from_settings(settings)
+    avoid_policy_name = avoid_policy_name_from_settings(settings)
+    avoid_signals = avoid_signals_from_settings(settings)
     entries = flatten_universe(universe)
     tickers = sorted({entry["ticker"] for entry in entries} | {"SPY", "QQQ"})
     period = str(settings["data"].get("period", "10y"))
@@ -1028,6 +1087,7 @@ def run_replay_quick(refresh: bool = False) -> None:
         enriched,
         snapshot_dates,
         theme_risk_mode=theme_risk_mode,
+        trade_plan_multipliers=trade_plan_multipliers,
     )
     baseline_signal_history = build_historical_signal_history(
         entries,
@@ -1035,6 +1095,7 @@ def run_replay_quick(refresh: bool = False) -> None:
         enriched,
         snapshot_dates,
         apply_theme_risk=False,
+        trade_plan_multipliers=trade_plan_multipliers,
     )
     evaluated_signals = evaluate_signal_history(signal_history)
     baseline_evaluated_signals = evaluate_signal_history(baseline_signal_history)
@@ -1071,11 +1132,12 @@ def run_replay_quick(refresh: bool = False) -> None:
         relaxed_overlay_signal_history,
     )
     theme_risk_policy_mode_results = run_theme_risk_policy_mode_search(baseline_signal_history)
-    avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    all_avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
     entry_parameter_results = run_entry_parameter_search(signal_history)
     avoid_by_signal = summarize_avoid_outcomes_by_signal(avoid_outcomes)
-    avoid_policy_results = run_avoid_policy_search(avoid_outcomes)
+    avoid_policy_results = run_avoid_policy_search(all_avoid_outcomes)
     output_path = write_replay_pdca_report(
         signal_history,
         signal_accuracy,
@@ -1104,6 +1166,8 @@ def run_replay_quick(refresh: bool = False) -> None:
         relaxed_theme_risk_overlay_blocks,
         None,
         None,
+        trade_plan_multipliers,
+        avoid_policy_name,
     )
     logger.info("Quick replay PDCA report written: %s", output_path)
     print(f"軽量履歴再生PDCAレポートを作成しました: {output_path}")

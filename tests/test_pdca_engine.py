@@ -5,6 +5,7 @@ import pandas as pd
 from src.pdca_engine import (
     calculate_forward_return,
     evaluate_avoid_outcomes,
+    evaluate_avoid_outcomes_for_signals,
     evaluate_virtual_trades,
     propose_signal_improvements,
     run_avoid_policy_search,
@@ -121,6 +122,23 @@ def test_evaluate_avoid_outcomes_marks_decline_as_correct(monkeypatch) -> None:
     outcomes = evaluate_avoid_outcomes(signal_history, horizon_days=2)
     assert outcomes.iloc[0]["20d_return_pct"] == -5.0
     assert bool(outcomes.iloc[0]["is_correct"]) is True
+
+
+def test_evaluate_avoid_outcomes_for_signals_can_use_sell_only(monkeypatch) -> None:
+    signal_history = pd.DataFrame(
+        [
+            {"snapshot": "2026-01-01", "ETF": "SMH", "判定": "見送り"},
+            {"snapshot": "2026-01-01", "ETF": "QQQ", "判定": "売却候補"},
+        ]
+    )
+    close = pd.Series(
+        [100.0, 98.0, 95.0],
+        index=pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-05"]),
+    )
+    monkeypatch.setattr("src.pdca_engine.load_cached_close", lambda ticker: close)
+    outcomes = evaluate_avoid_outcomes_for_signals(signal_history, {"売却候補"}, horizon_days=2)
+    assert list(outcomes["ETF"]) == ["QQQ"]
+    assert list(outcomes["判定"]) == ["売却候補"]
 
 
 def test_summarize_avoid_outcomes_counts_missed_upside() -> None:

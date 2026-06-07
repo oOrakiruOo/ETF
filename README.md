@@ -153,6 +153,15 @@ python -m src.main replay-quick
 - `high_only`: 高リスクだけ買い/押し目を止める
 - `balanced`: 高リスクは停止、中リスクは一段弱める
 - `strict`: 中リスクもより強く弱める
+
+2026-06-07時点では、過剰抑制チェックの結果を受けて `high_only` を本運用前候補にしています。
+
+日次シグナルと履歴再生の第1買い・停止価格は、`config/settings.yaml` の `trade_plan` で調整します。
+2026-06-07時点では、履歴再生PDCAの買い価格候補を反映して `entry_multiplier: 1.04`、`stop_multiplier: 0.95` を使用します。
+
+見送り・売却候補の回避成否評価は `config/settings.yaml` の `pdca.avoid_policy` で切り替えます。
+2026-06-07時点では、見送りを監視扱いに寄せ、売却候補だけを主な回避評価対象にする `sell_only` を本運用前候補にしています。
+
 - `data/processed/signals/hybrid_rotation_signal_diagnostics_YYYY-MM-DD.csv`
 - `data/processed/signals/hybrid_rotation_signal_grid_YYYY-MM-DD.csv`
 - `data/processed/signals/hybrid_rotation_signal_regime_validation_YYYY-MM-DD.csv`
@@ -164,7 +173,11 @@ python -m src.main replay-quick
 `signal_execution_backtest` は、Coreを持ちながらSatellite枠だけを買い系シグナルで仮想運用します。
 `hybrid_rotation_signal_backtest` は、月次ローテーション本体を維持しながら、Satellite枠の一部だけを買い系シグナルへ一時配分する統合検証です。
 `hybrid_rotation_signal_grid` は、厳格な買い系シグナルだけでなく、ETFスコア・テーマスコア・RRで見送り候補を救う緩和ポリシーも比較します。
-`replay` 内のハイブリッド総当たりは、直近PDCAで有望だった範囲を重点探索します。
+`replay` 内のハイブリッド総当たりは、直近PDCAで有望だった範囲を重点探索します。2024年AI加速局面の取りこぼし確認のため、2026-06-07時点では高スコア候補の `RR >= 1.0` も探索対象に含めます。
+フル `replay` はハイブリッド総当たりを含むため、日常確認は `replay-quick`、本命候補の再確認は `replay` を使います。
+2026-06-07の再検証では、`score >= 65` まで緩めると2024年のSMH/SOXX候補は拾えますが、最大DDが悪化したため本命候補にはせず、`score >= 70` とURA補助制限を優先します。
+追加の軽量検証では、全体条件は `score >= 70 / RR >= 1.0` のまま維持し、SMH/SOXXだけ `score >= 65 / RR >= 1.0` まで限定緩和すると、最大DDを悪化させずに年率が改善しました。この限定緩和を本運用前候補として追跡します。
+局面別の軽量確認では、2024年AI加速局面の現行比が `-2.88%` から `-2.39%` に改善しましたが、まだ最弱局面として残るため、完全解消ではなく段階的改善として扱います。
 `hybrid_rotation_signal_regime_validation` は、ハイブリッド案を相場局面別に分解して、現行月次ローテーションとの差を確認します。
 `hybrid_entry_guard_search` は、急落日に即エントリーしないガードが成績改善につながるかを確認します。
 `hybrid_acceleration_mode_search` は、強い上昇トレンド局面で補助シグナルを通常運用・半減・停止する案を比較します。

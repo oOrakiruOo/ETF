@@ -5,10 +5,13 @@ import pandas as pd
 from src.main import (
     apply_relaxed_theme_entry_policy,
     apply_theme_risk_overlay_to_signal_history,
+    avoid_policy_name_from_settings,
+    avoid_signals_from_settings,
     build_signal_rows_for_metrics,
     run_theme_risk_policy_mode_search,
     summarize_theme_risk_overlay_blocks,
     summarize_theme_risk_overlay_effect,
+    trade_plan_multipliers_from_settings,
 )
 
 
@@ -41,6 +44,51 @@ def test_build_signal_rows_includes_theme_rotation_risk_columns() -> None:
     assert rows[0]["テーマリスクスコア"] >= 60
     assert "相対劣後" in str(rows[0]["テーマリスク理由"])
     assert "Core優先" in str(rows[0]["テーマ予防策"])
+
+
+def test_trade_plan_multipliers_from_settings_uses_defaults() -> None:
+    result = trade_plan_multipliers_from_settings({})
+    assert result == {"entry_multiplier": 1.0, "stop_multiplier": 1.0, "target_multiplier": 1.0}
+
+
+def test_avoid_policy_from_settings_uses_sell_only_and_safe_default() -> None:
+    assert avoid_policy_name_from_settings({"pdca": {"avoid_policy": "sell_only"}}) == "sell_only"
+    assert avoid_signals_from_settings({"pdca": {"avoid_policy": "sell_only"}}) == {"売却候補"}
+    assert avoid_policy_name_from_settings({"pdca": {"avoid_policy": "unknown"}}) == "current_all_avoid"
+
+
+def test_build_signal_rows_applies_trade_plan_multipliers() -> None:
+    entries = [{"ticker": "SMH", "theme": "半導体", "bucket": "satellite"}]
+    theme_map = {"themes": {"半導体": ["SMH"]}}
+    metrics_by_ticker = {
+        "SMH": {
+            "price": 100.0,
+            "high_52w": 110.0,
+            "ma_21": 96.0,
+            "ma_50": 90.0,
+            "ma_200": 80.0,
+            "ma_50_slope": 0.02,
+            "ma_200_slope": 0.01,
+            "return_3m": 0.08,
+            "return_6m": 0.12,
+            "return_12m": 0.20,
+            "rs_qqq_3m": 0.03,
+            "rs_spy_3m": 0.05,
+            "rsi_14": 55.0,
+            "drawdown_52w_pct": -9.0,
+            "atr_14": 4.0,
+            "three_day_return_pct": 1.0,
+            "volume_change_pct": 0.0,
+        }
+    }
+    rows = build_signal_rows_for_metrics(
+        entries,
+        theme_map,
+        metrics_by_ticker,
+        trade_plan_multipliers={"entry_multiplier": 1.04, "stop_multiplier": 0.95},
+    )
+    assert rows[0]["第1買い"] == 99.84
+    assert rows[0]["停止価格"] == 76.0
 
 
 def test_summarize_theme_risk_overlay_effect_compares_signal_counts() -> None:

@@ -47,6 +47,10 @@ class HybridSignalConfig:
     ticker_min_etf_scores: dict[str, float] = field(default_factory=dict)
     ticker_min_theme_scores: dict[str, float] = field(default_factory=dict)
     ticker_min_rr_values: dict[str, float] = field(default_factory=dict)
+    relaxed_signal_tickers: tuple[str, ...] = ()
+    relaxed_min_etf_score: float = 65.0
+    relaxed_min_theme_score: float = 65.0
+    relaxed_min_rr: float = 1.0
 
 
 BUY_SIGNAL_LABELS = {"強気買い候補", "買い候補", "押し目待ち", "積立候補"}
@@ -71,6 +75,10 @@ def copy_hybrid_signal_config(config: HybridSignalConfig, **overrides: object) -
         "ticker_min_etf_scores": dict(config.ticker_min_etf_scores),
         "ticker_min_theme_scores": dict(config.ticker_min_theme_scores),
         "ticker_min_rr_values": dict(config.ticker_min_rr_values),
+        "relaxed_signal_tickers": config.relaxed_signal_tickers,
+        "relaxed_min_etf_score": config.relaxed_min_etf_score,
+        "relaxed_min_theme_score": config.relaxed_min_theme_score,
+        "relaxed_min_rr": config.relaxed_min_rr,
     }
     values.update(overrides)
     return HybridSignalConfig(**values)
@@ -744,11 +752,20 @@ def filter_hybrid_signal_candidates(signals: pd.DataFrame, config: HybridSignalC
         required = {"ETFスコア", "テーマスコア", "RR"}
         if not required.issubset(candidates.columns):
             return pd.DataFrame(columns=signals.columns)
-        candidates = candidates[
+        base_gate = (
             (candidates["ETFスコア"].astype(float) >= config.min_etf_score)
             & (candidates["テーマスコア"].astype(float) >= config.min_theme_score)
             & (candidates["RR"].astype(float) >= config.min_rr)
-        ].copy()
+        )
+        relaxed_gate = pd.Series(False, index=candidates.index)
+        if config.relaxed_signal_tickers and "ETF" in candidates.columns:
+            relaxed_gate = (
+                candidates["ETF"].astype(str).isin(config.relaxed_signal_tickers)
+                & (candidates["ETFスコア"].astype(float) >= config.relaxed_min_etf_score)
+                & (candidates["テーマスコア"].astype(float) >= config.relaxed_min_theme_score)
+                & (candidates["RR"].astype(float) >= config.relaxed_min_rr)
+            )
+        candidates = candidates[base_gate | relaxed_gate].copy()
     if "ETF" in candidates.columns:
         blocked = set(config.blocked_signal_tickers)
         if blocked:
@@ -1320,6 +1337,10 @@ def run_hybrid_ticker_rule_search(
                 "ticker_min_etf_scores": str(cfg.ticker_min_etf_scores),
                 "ticker_min_theme_scores": str(cfg.ticker_min_theme_scores),
                 "ticker_min_rr_values": str(cfg.ticker_min_rr_values),
+                "relaxed_signal_tickers": ",".join(cfg.relaxed_signal_tickers),
+                "relaxed_min_etf_score": cfg.relaxed_min_etf_score,
+                "relaxed_min_theme_score": cfg.relaxed_min_theme_score,
+                "relaxed_min_rr": cfg.relaxed_min_rr,
                 **summary,
                 "rotation_trade_count": rotation_trades,
                 "signal_entry_count": int(diagnostics.iloc[0]["signal_entry_count"]) if not diagnostics.empty else 0,

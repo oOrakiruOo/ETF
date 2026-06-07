@@ -11,6 +11,7 @@ from src.backtest_engine import (
     calculate_cumulative_return,
     calculate_max_drawdown,
     choose_satellites,
+    copy_hybrid_signal_config,
     filter_hybrid_signal_candidates,
     is_acceleration_regime,
     run_hybrid_acceleration_mode_search,
@@ -796,6 +797,68 @@ def test_filter_hybrid_signal_candidates_applies_ticker_specific_gates() -> None
         ),
     )
     assert result["ETF"].tolist() == ["SMH"]
+
+
+def test_filter_hybrid_signal_candidates_can_relax_rr_for_high_score_watch_signals() -> None:
+    signals = pd.DataFrame(
+        [
+            {"ETF": "SMH", "判定": "見送り", "ETFスコア": 86.0, "テーマスコア": 72.0, "RR": 1.1},
+            {"ETF": "SOXX", "判定": "見送り", "ETFスコア": 84.0, "テーマスコア": 72.0, "RR": 0.8},
+            {"ETF": "URA", "判定": "見送り", "ETFスコア": 69.0, "テーマスコア": 76.0, "RR": 1.4},
+        ]
+    )
+    result = filter_hybrid_signal_candidates(
+        signals,
+        HybridSignalConfig(
+            candidate_policy="watch_score_gate",
+            min_etf_score=70.0,
+            min_theme_score=70.0,
+            min_rr=1.0,
+        ),
+    )
+    assert result["ETF"].tolist() == ["SMH"]
+
+
+def test_filter_hybrid_signal_candidates_relaxes_only_configured_tickers() -> None:
+    signals = pd.DataFrame(
+        [
+            {"ETF": "SMH", "判定": "見送り", "ETFスコア": 85.0, "テーマスコア": 66.0, "RR": 1.2},
+            {"ETF": "BOTZ", "判定": "見送り", "ETFスコア": 85.0, "テーマスコア": 66.0, "RR": 1.2},
+            {"ETF": "URA", "判定": "見送り", "ETFスコア": 73.0, "テーマスコア": 75.0, "RR": 1.1},
+        ]
+    )
+    result = filter_hybrid_signal_candidates(
+        signals,
+        HybridSignalConfig(
+            candidate_policy="watch_score_gate",
+            min_etf_score=70.0,
+            min_theme_score=70.0,
+            min_rr=1.0,
+            relaxed_signal_tickers=("SMH", "SOXX"),
+            relaxed_min_etf_score=65.0,
+            relaxed_min_theme_score=65.0,
+            relaxed_min_rr=1.0,
+            ticker_min_etf_scores={"URA": 75.0},
+            ticker_min_rr_values={"URA": 2.5},
+        ),
+    )
+    assert result["ETF"].tolist() == ["SMH"]
+
+
+def test_copy_hybrid_signal_config_preserves_relaxed_signal_tickers() -> None:
+    config = HybridSignalConfig(
+        candidate_policy="watch_score_gate",
+        relaxed_signal_tickers=("SMH", "SOXX"),
+        relaxed_min_etf_score=65.0,
+        relaxed_min_theme_score=65.0,
+        relaxed_min_rr=1.0,
+    )
+    copied = copy_hybrid_signal_config(config, max_entry_day_loss_pct=-3.0)
+    assert copied.relaxed_signal_tickers == ("SMH", "SOXX")
+    assert copied.relaxed_min_etf_score == 65.0
+    assert copied.relaxed_min_theme_score == 65.0
+    assert copied.relaxed_min_rr == 1.0
+    assert copied.max_entry_day_loss_pct == -3.0
 
 
 def test_hybrid_ticker_rule_search_can_block_ura_overlay() -> None:

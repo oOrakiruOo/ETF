@@ -183,6 +183,7 @@ def write_weekly_pdca_report(
     virtual_trade_summary: pd.DataFrame | None = None,
     avoid_outcomes: pd.DataFrame | None = None,
     avoid_summary: pd.DataFrame | None = None,
+    avoid_policy_name: str = "current_all_avoid",
     output_dir: str | Path = "reports/weekly",
     report_date: datetime | None = None,
 ) -> Path:
@@ -257,6 +258,8 @@ def write_weekly_pdca_report(
         virtual_detail_text,
         "",
         "### 見送り・リスク削減の評価",
+        f"現在の回避評価方針: `{avoid_policy_name}`",
+        "",
         avoid_summary_text,
         "",
         avoid_detail_text,
@@ -314,14 +317,16 @@ def write_replay_pdca_report(
     relaxed_theme_risk_overlay_blocks: pd.DataFrame | None = None,
     hybrid_trade_log: pd.DataFrame | None = None,
     hybrid_attribution_2024: pd.DataFrame | None = None,
+    trade_plan_multipliers: dict[str, float] | None = None,
+    avoid_policy_name: str = "current_all_avoid",
     output_dir: str | Path = "reports/weekly",
+    processed_output_dir: str | Path | None = None,
     report_date: datetime | None = None,
 ) -> Path:
     date = report_date or datetime.now()
     directory = ensure_dir(output_dir)
     output_path = PROJECT_ROOT / directory / f"replay_pdca_report_{date:%Y-%m-%d}.md"
-    processed_dir = PROJECT_ROOT / "data" / "processed" / "signals"
-    processed_dir.mkdir(parents=True, exist_ok=True)
+    processed_dir = ensure_dir(processed_output_dir or "data/processed/signals")
     signal_path = processed_dir / f"historical_signals_{date:%Y-%m-%d}.csv"
     forward_path = processed_dir / f"replay_signal_accuracy_{date:%Y-%m-%d}.csv"
     virtual_path = processed_dir / f"replay_virtual_trades_{date:%Y-%m-%d}.csv"
@@ -394,6 +399,20 @@ def write_replay_pdca_report(
     if hybrid_attribution_2024 is not None:
         hybrid_attribution_2024.to_csv(hybrid_attribution_2024_path, index=False)
 
+    trade_plan_settings = trade_plan_multipliers or {
+        "entry_multiplier": 1.0,
+        "stop_multiplier": 1.0,
+        "target_multiplier": 1.0,
+    }
+    trade_plan_settings_text = "\n".join(
+        [
+            f"- 第1買い倍率: x{float(trade_plan_settings.get('entry_multiplier', 1.0)):.2f}",
+            f"- 停止価格倍率: x{float(trade_plan_settings.get('stop_multiplier', 1.0)):.2f}",
+            f"- 目標価格倍率: x{float(trade_plan_settings.get('target_multiplier', 1.0)):.2f}",
+            "- 買い価格・停止価格の総当たりは、上記設定反映後の価格に対する追加検証倍率です。",
+        ]
+    )
+
     signal_counts = "履歴シグナルなし"
     theme_risk_signal_counts = "テーマリスク列なし"
     if not signal_history.empty:
@@ -432,7 +451,7 @@ def write_replay_pdca_report(
     if entry_parameter_results is not None and not entry_parameter_results.empty:
         best = entry_parameter_results.iloc[0]
         action_items.append(
-            f"買い価格候補: 第1買いx{float(best['entry_multiplier']):.2f} / 停止価格x{float(best['stop_multiplier']):.2f} を次回バックテスト候補に追加"
+            f"買い価格追加検証候補: 第1買いx{float(best['entry_multiplier']):.2f} / 停止価格x{float(best['stop_multiplier']):.2f} を次回バックテスト候補に追加"
         )
     if avoid_policy_results is not None and not avoid_policy_results.empty:
         best_policy = avoid_policy_results.iloc[0]
@@ -454,8 +473,10 @@ def write_replay_pdca_report(
             action_items.append(f"ハイブリッドBT: 年率{hybrid_annual:.2f}% を確認。現行月次ローテーションとの優劣を比較")
     if hybrid_grid is not None and not hybrid_grid.empty:
         best_hybrid = hybrid_grid.iloc[0]
+        min_etf_score = best_hybrid.get("min_etf_score", best_hybrid.get("min_score", 0.0))
+        min_theme_score = best_hybrid.get("min_theme_score", best_hybrid.get("min_score", 0.0))
         action_items.append(
-            f"ハイブリッド候補: {best_hybrid.get('candidate_policy', 'strict_buy')} / 加速局面{best_hybrid.get('acceleration_overlay_mode', 'normal')} / 補助枠{float(best_hybrid['signal_overlay_weight_pct']):.0f}% / entry x{float(best_hybrid['entry_multiplier']):.2f} / stop x{float(best_hybrid['stop_multiplier']):.2f} / 保有{int(best_hybrid['max_holding_days'])}日 / {int(best_hybrid['max_signal_positions'])}枠"
+            f"ハイブリッド候補: {best_hybrid.get('candidate_policy', 'strict_buy')} / 加速局面{best_hybrid.get('acceleration_overlay_mode', 'normal')} / 補助枠{float(best_hybrid['signal_overlay_weight_pct']):.0f}% / entry x{float(best_hybrid['entry_multiplier']):.2f} / stop x{float(best_hybrid['stop_multiplier']):.2f} / 保有{int(best_hybrid['max_holding_days'])}日 / {int(best_hybrid['max_signal_positions'])}枠 / ETF{float(min_etf_score):.0f}+ テーマ{float(min_theme_score):.0f}+ RR{float(best_hybrid.get('min_rr', 0.0)):.1f}+"
         )
     if hybrid_regime_validation is not None and not hybrid_regime_validation.empty:
         weak_hybrid = hybrid_regime_validation.sort_values("vs_rotation_pct").head(1).iloc[0]
@@ -476,8 +497,17 @@ def write_replay_pdca_report(
         )
     if hybrid_ticker_rule_results is not None and not hybrid_ticker_rule_results.empty:
         best_ticker_rule = hybrid_ticker_rule_results.iloc[0]
+        relaxed_tickers = str(best_ticker_rule.get("relaxed_signal_tickers", "") or "")
+        relaxed_text = ""
+        if relaxed_tickers:
+            relaxed_text = (
+                f" / 限定緩和{relaxed_tickers} "
+                f"ETF{float(best_ticker_rule.get('relaxed_min_etf_score', 0.0)):.0f}+"
+                f" テーマ{float(best_ticker_rule.get('relaxed_min_theme_score', 0.0)):.0f}+"
+                f" RR{float(best_ticker_rule.get('relaxed_min_rr', 0.0)):.1f}+"
+            )
         action_items.append(
-            f"ハイブリッドETF別制限候補: {best_ticker_rule['rule_name']} / 年率{float(best_ticker_rule['annual_return_pct']):.2f}% / URA補助{int(best_ticker_rule['ura_signal_trade_count'])}件"
+            f"ハイブリッドETF別制限候補: {best_ticker_rule['rule_name']} / 年率{float(best_ticker_rule['annual_return_pct']):.2f}% / URA補助{int(best_ticker_rule['ura_signal_trade_count'])}件{relaxed_text}"
         )
     if hybrid_theme_risk_mode_results is not None and not hybrid_theme_risk_mode_results.empty:
         best_hybrid_theme_risk_mode = hybrid_theme_risk_mode_results.iloc[0]
@@ -516,6 +546,13 @@ def write_replay_pdca_report(
         f"# 履歴再生PDCA {date:%Y-%m-%d}",
         "",
         "過去データ上で日次判定を月次復元し、仮想売買と見送り評価を再計算します。実売買発注は行いません。",
+        "",
+        "## 売買計画設定",
+        trade_plan_settings_text,
+        "",
+        "## 回避評価方針",
+        f"- 現在の回避評価方針: `{avoid_policy_name}`",
+        "- `sell_only` の場合、見送りは監視扱いに寄せ、売却候補だけを回避成否評価の主対象にします。",
         "",
         "## シグナル分布",
         signal_counts,

@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 
-def calculate_trade_plan(metrics: dict[str, float]) -> dict[str, float]:
+def adjusted_trade_price(value: float, multiplier: float) -> float:
+    return value * multiplier if multiplier > 0 else value
+
+
+def calculate_trade_plan(
+    metrics: dict[str, float],
+    entry_multiplier: float = 1.0,
+    stop_multiplier: float = 1.0,
+    target_multiplier: float = 1.0,
+) -> dict[str, float]:
     price = metrics["price"]
     high_52w = metrics.get("high_52w", price)
     ma_21 = metrics.get("ma_21", price)
@@ -11,8 +20,12 @@ def calculate_trade_plan(metrics: dict[str, float]) -> dict[str, float]:
     second_buy = min(high_52w * 0.90, ma_50, price - 2 * atr if atr > 0 else price * 0.90)
     third_buy = min(high_52w * 0.85, ma_50 * 0.98, price - 3 * atr if atr > 0 else price * 0.85)
     stop_price = min(metrics.get("ma_200", price * 0.9), third_buy * 0.95)
-    conservative_target = high_52w * 1.10
-    aggressive_target = high_52w * 1.20
+    first_buy = min(adjusted_trade_price(first_buy, entry_multiplier), price)
+    stop_price = adjusted_trade_price(stop_price, stop_multiplier)
+    if stop_price >= first_buy:
+        stop_price = first_buy * 0.97
+    conservative_target = adjusted_trade_price(high_52w * 1.10, target_multiplier)
+    aggressive_target = adjusted_trade_price(high_52w * 1.20, target_multiplier)
     risk = max(first_buy - stop_price, 0.01)
     reward = max(conservative_target - first_buy, 0.0)
     rr = reward / risk
