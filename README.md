@@ -96,6 +96,20 @@ python -m src.main audit
 python -m src.main daily
 ```
 
+Windowsタスクスケジューラから実行する場合は、PowerShellラッパーを使います。
+このラッパーはプロジェクト内の仮想環境Pythonを使い、Temp権限問題を避けるため `tmp/` を一時フォルダに設定します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command daily
+```
+
+週次PDCAや軽量履歴再生も同じ入口から実行できます。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command weekly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command replay-quick
+```
+
 日次実行では、以下も同時に作成します。
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
