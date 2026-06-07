@@ -1,0 +1,36 @@
+profiles:
+  baseline:
+    description: "初期ルール。Core 60%, Satellite 25%, Cash 15%。"
+    core_spy_weight: 0.30
+    core_qqq_weight: 0.30
+    satellite_weight: 0.25
+    cash_weight: 0.15
+    top_satellites: 3
+    rebalance_frequency: ME
+    stop_new_buy_drawdown_pct: -8.0
+    min_satellite_score: 45.0
+    score_profile: balanced
+
+  current_candidate:
+    description: "2026-06-06時点の暫定本命。大損回避とSPY超えを優先。"
+    core_spy_weight: 0.30
+    core_qqq_weight: 0.30
+    satellite_weight: 0.35
+    cash_weight: 0.05
+    top_satellites: 4
+    rebalance_frequency: ME
+    stop_new_buy_drawdown_pct: -15.0
+    min_satellite_score: 45.0
+    score_profile: balanced
+
+  aggressive_watch:
+    description: "攻め候補。年率は伸びるが最大DDが大きく、現時点では本採用しない。"
+    core_spy_weight: 0.30
+    core_qqq_weight: 0.30
+    satellite_weight: 0.40
+    cash_weight: 0.0
+    top_satellites: 3
+    rebalance_frequency: ME
+    stop_new_buy_drawdown_pct: -12.0
+    min_satellite_score: 25.0
+    score_profile: momentum

@@ -1,0 +1,27 @@
+data:
+  period: 10y
+  interval: 1d
+  benchmark_core: SPY
+  benchmark_growth: QQQ
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  portfolio: data/portfolio/portfolio.csv
+  daily_reports: reports/daily
+  weekly_reports: reports/weekly
+  logs: logs
+
+scoring:
+  trend_weight: 25
+  momentum_weight: 25
+  pullback_weight: 20
+  liquidity_weight: 10
+  theme_weight: 20
+
+theme_risk:
+  overlay_mode: balanced
+
+report:
+  top_n: 14
+  currency: USD

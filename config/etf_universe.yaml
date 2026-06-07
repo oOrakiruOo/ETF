@@ -1,0 +1,57 @@
+core:
+  - ticker: SPY
+    theme: Market
+    label: S&P 500
+  - ticker: QQQ
+    theme: Technology
+    label: Nasdaq 100
+  - ticker: VTI
+    theme: Market
+    label: Total US Market
+  - ticker: VT
+    theme: Global
+    label: Global Equity
+
+satellite:
+  - ticker: SMH
+    theme: 半導体
+    label: 半導体
+  - ticker: SOXX
+    theme: 半導体
+    label: 半導体
+  - ticker: GRID
+    theme: 送配電
+    label: 送配電・スマートグリッド
+  - ticker: XLU
+    theme: 電力
+    label: 電力公益
+  - ticker: URA
+    theme: 原子力
+    label: 原子力・ウラン
+  - ticker: CIBR
+    theme: サイバー
+    label: サイバーセキュリティ
+  - ticker: BOTZ
+    theme: ロボティクス
+    label: ロボティクスAI
+  - ticker: PAVE
+    theme: インフラ
+    label: インフラ
+  - ticker: ITA
+    theme: 防衛
+    label: 防衛
+  - ticker: VGT
+    theme: AI
+    label: テクノロジー
+  - ticker: XLE
+    theme: エネルギー
+    label: エネルギー
+  - ticker: XLF
+    theme: 金融
+    label: 金融
+  - ticker: XLV
+    theme: ヘルスケア
+    label: ヘルスケア
+  - ticker: XLI
+    theme: 資本財
+    label: 資本財

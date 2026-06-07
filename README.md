@@ -1,0 +1,177 @@
+# Theme ETF Rotation System v4.0
+
+MASATO Tactical ETF Engine は、Core-Satellite戦略でテーマETFの買い候補、押し目待ち、利確候補、売却候補を判定する研究用システムです。
+
+実際の売買発注は行いません。売買提案、通知文、検証、レポート作成までを担当し、最終判断と発注はMASATOが行います。
+
+## 構成
+
+- `config/`: ETFユニバース、テーマ対応、リスクルール、基本設定
+- `src/`: データ取得、指標、スコア、リスク、シグナル、レポート
+- `data/portfolio/portfolio.csv`: 保有ETF管理CSV
+- `reports/daily/`: 日次レポート出力先
+- `tests/`: pytestテスト
+
+## セットアップ
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+このPCで `python` が見つからない場合は、Codex同梱Pythonを使えます。
+
+```powershell
+& 'C:\Users\ms-it\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' -m pip install -r requirements.txt
+```
+
+## 日次レポート作成
+
+```powershell
+python -m src.main --refresh
+```
+
+2回目以降はキャッシュ済みCSVを使えます。
+
+```powershell
+python -m src.main
+```
+
+## バックテストとPDCA
+
+10年バックテストを作成します。
+
+```powershell
+python -m src.main backtest
+```
+
+標準では `config/strategy_profiles.yaml` の `current_candidate` を使います。
+別プロファイルで検証する場合は `--profile` を指定します。
+
+```powershell
+python -m src.main backtest --profile baseline
+python -m src.main backtest --profile aggressive_watch
+```
+
+改善パラメータの総当たり検証を行います。
+
+```powershell
+python -m src.main optimize
+```
+
+勝ち筋周辺に絞り、モメンタム重視スコアも含めて再検証します。
+
+```powershell
+python -m src.main refine
+```
+
+最良候補を相場局面別に検証します。
+
+```powershell
+python -m src.main validate
+```
+
+弱点局面でどのETFを採用していたか監査します。
+
+```powershell
+python -m src.main audit
+```
+
+## 現在の実装段階
+
+現在は「検証エンジンとルール改善フェーズ」です。
+
+- 完了: 日次判定、10年バックテスト、総当たり検証、局面別検証、弱点局面の採用監査
+- 完了: 暫定本命ルールの固定、保有CSV評価、通知候補レポート
+- 進行中: 過剰最適化を避ける検証、週次PDCAの自動レポート化
+- 次の実装候補: 保有ETFの売却/停止判定強化、通知先連携
+
+2026-06-06時点の暫定本命は `config/strategy_profiles.yaml` の `current_candidate` です。
+
+## 保有CSVと通知候補
+
+保有ETFは `data/portfolio/portfolio.csv` に入力します。
+日次レポート実行時に現在価格、時価、比率、含み損益を更新して表示します。
+
+```powershell
+python -m src.main daily
+```
+
+日次実行では、以下も同時に作成します。
+
+- `reports/daily/daily_report_YYYY-MM-DD.md`
+- `reports/daily/notification_candidates_YYYY-MM-DD.md`
+- `data/processed/signals/signals_YYYY-MM-DD.csv`
+
+週次レポートでは、保存済みの日次シグナルを読み込み、1営業日後・5営業日後・20営業日後のフォワードリターンを評価します。
+
+```powershell
+python -m src.main weekly
+```
+
+週次実行では、以下も作成します。
+
+- `reports/weekly/weekly_report_YYYY-MM-DD.md`
+- `data/processed/signals/signal_forward_returns_YYYY-MM-DD.csv`
+- `data/processed/signals/virtual_trades_YYYY-MM-DD.csv`
+- `data/processed/signals/avoid_outcomes_YYYY-MM-DD.csv`
+
+週次PDCAでは、買い系シグナルを第1買い価格・保守目標・停止価格で仮想検証します。
+見送り・売却候補・リスク削減判定は、20営業日後に回避が正しかったかを記録します。
+どちらも実売買ではなく、ルール改善用の検証ログです。
+
+過去データ上で月次シグナルを復元し、仮想売買と見送り評価をすぐ確認する場合は以下を実行します。
+
+```powershell
+python -m src.main replay
+```
+
+履歴再生では、以下を作成します。
+
+- `reports/weekly/replay_pdca_report_YYYY-MM-DD.md`
+- `data/processed/signals/historical_signals_YYYY-MM-DD.csv`
+- `data/processed/signals/replay_virtual_trades_YYYY-MM-DD.csv`
+- `data/processed/signals/replay_avoid_outcomes_YYYY-MM-DD.csv`
+- `data/processed/signals/replay_entry_parameter_search_YYYY-MM-DD.csv`
+- `data/processed/signals/replay_avoid_by_signal_YYYY-MM-DD.csv`
+- `data/processed/signals/replay_avoid_policy_search_YYYY-MM-DD.csv`
+- `data/processed/signals/signal_execution_backtest_YYYY-MM-DD.csv`
+- `data/processed/signals/signal_execution_diagnostics_YYYY-MM-DD.csv`
+- `data/processed/signals/signal_execution_grid_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_rotation_signal_backtest_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_theme_risk_mode_search_YYYY-MM-DD.csv`
+- `data/processed/signals/theme_risk_policy_mode_search_YYYY-MM-DD.csv`
+
+テーマ交代リスクの防御強度は `config/settings.yaml` の `theme_risk.overlay_mode` で切り替えます。
+
+- `off`: テーマリスク抑制なし
+- `high_only`: 高リスクだけ買い/押し目を止める
+- `balanced`: 高リスクは停止、中リスクは一段弱める
+- `strict`: 中リスクもより強く弱める
+- `data/processed/signals/hybrid_rotation_signal_diagnostics_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_rotation_signal_grid_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_rotation_signal_regime_validation_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_entry_guard_search_YYYY-MM-DD.csv`
+- `data/processed/signals/hybrid_acceleration_mode_search_YYYY-MM-DD.csv`
+
+`replay_entry_parameter_search` は、第1買い価格と停止価格の候補を振って、約定率・勝率・平均損益を比較します。
+`replay_avoid_policy_search` は、見送り・売却候補・リスク削減をどこまで回避対象にするかを比較します。
+`signal_execution_backtest` は、Coreを持ちながらSatellite枠だけを買い系シグナルで仮想運用します。
+`hybrid_rotation_signal_backtest` は、月次ローテーション本体を維持しながら、Satellite枠の一部だけを買い系シグナルへ一時配分する統合検証です。
+`hybrid_rotation_signal_grid` は、厳格な買い系シグナルだけでなく、ETFスコア・テーマスコア・RRで見送り候補を救う緩和ポリシーも比較します。
+`replay` 内のハイブリッド総当たりは、直近PDCAで有望だった範囲を重点探索します。
+`hybrid_rotation_signal_regime_validation` は、ハイブリッド案を相場局面別に分解して、現行月次ローテーションとの差を確認します。
+`hybrid_entry_guard_search` は、急落日に即エントリーしないガードが成績改善につながるかを確認します。
+`hybrid_acceleration_mode_search` は、強い上昇トレンド局面で補助シグナルを通常運用・半減・停止する案を比較します。
+この結果は次回バックテスト候補であり、即時の正式ルール変更ではありません。
+
+## 検証
+
+```powershell
+python -m pytest
+```
+
+## 注意
+
+- yfinanceは研究用途の初期データソースです。
+- 自動発注機能は実装しません。
+- ルール変更はバックテスト後に行う前提です。

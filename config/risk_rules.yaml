@@ -1,0 +1,33 @@
+portfolio_limits:
+  core_min_pct: 50
+  core_max_pct: 70
+  satellite_min_pct: 20
+  satellite_max_pct: 40
+  cash_min_pct: 0
+  cash_max_pct: 30
+
+position_limits:
+  etf_max_pct: 10
+  theme_max_pct: 15
+  satellite_total_max_pct: 40
+
+drawdown_rules:
+  stop_new_buy_pct: -8
+  halve_satellite_pct: -12
+  reduce_to_core_pct: -15
+
+entry:
+  min_etf_score: 70
+  min_theme_score: 70
+  max_rsi: 75
+  pullback_min_pct: -15
+  pullback_max_pct: -5
+  min_risk_reward: 2.0
+
+avoid:
+  etf_score_below: 65
+  theme_score_below: 65
+  rsi_at_or_above: 75
+  too_close_to_high_pct: -3
+  three_day_surge_pct: 8
+  min_risk_reward: 1.5
