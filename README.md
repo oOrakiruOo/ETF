@@ -125,6 +125,12 @@ python -m src.main weekly
 python -m src.main replay
 ```
 
+日常PDCAでは、重いハイブリッド総当たりを省いた軽量版を使えます。
+
+```powershell
+python -m src.main replay-quick
+```
+
 履歴再生では、以下を作成します。
 
 - `reports/weekly/replay_pdca_report_YYYY-MM-DD.md`

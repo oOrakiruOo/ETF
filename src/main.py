@@ -1001,12 +1001,120 @@ def run_replay(refresh: bool = False) -> None:
     print(f"履歴再生PDCAレポートを作成しました: {output_path}")
 
 
+def run_replay_quick(refresh: bool = False) -> None:
+    setup_logging()
+    logger = logging.getLogger(__name__)
+    settings = load_yaml("config/settings.yaml")
+    universe = load_yaml("config/etf_universe.yaml")
+    theme_map_config = load_yaml("config/theme_map.yaml")
+    theme_risk_mode = theme_risk_overlay_mode_from_settings(settings)
+    entries = flatten_universe(universe)
+    tickers = sorted({entry["ticker"] for entry in entries} | {"SPY", "QQQ"})
+    period = str(settings["data"].get("period", "10y"))
+    interval = str(settings["data"].get("interval", "1d"))
+    logger.info("Loading quick replay data for %s", ", ".join(tickers))
+    raw_data = load_price_data(tickers, period=period, interval=interval, refresh=refresh)
+    qqq_close = raw_data["QQQ"]["Adj Close"]
+    spy_close = raw_data["SPY"]["Adj Close"]
+    enriched = {
+        ticker: add_indicators(frame, qqq_close=qqq_close, spy_close=spy_close)
+        for ticker, frame in raw_data.items()
+    }
+    prices = build_price_matrix(raw_data)
+    snapshot_dates = replay_snapshot_dates(prices)
+    signal_history = build_historical_signal_history(
+        entries,
+        theme_map_config,
+        enriched,
+        snapshot_dates,
+        theme_risk_mode=theme_risk_mode,
+    )
+    baseline_signal_history = build_historical_signal_history(
+        entries,
+        theme_map_config,
+        enriched,
+        snapshot_dates,
+        apply_theme_risk=False,
+    )
+    evaluated_signals = evaluate_signal_history(signal_history)
+    baseline_evaluated_signals = evaluate_signal_history(baseline_signal_history)
+    signal_accuracy = summarize_signal_accuracy(evaluated_signals)
+    virtual_trades = evaluate_virtual_trades(signal_history)
+    baseline_virtual_trades = evaluate_virtual_trades(baseline_signal_history)
+    virtual_trade_summary = summarize_virtual_trades(virtual_trades)
+    baseline_virtual_trade_summary = summarize_virtual_trades(baseline_virtual_trades)
+    theme_risk_overlay_comparison = summarize_theme_risk_overlay_effect(
+        baseline_signal_history,
+        signal_history,
+        baseline_evaluated_signals,
+        evaluated_signals,
+        baseline_virtual_trade_summary,
+        virtual_trade_summary,
+    )
+    theme_risk_overlay_blocks = summarize_theme_risk_overlay_blocks(baseline_signal_history, signal_history)
+    relaxed_baseline_signal_history = apply_relaxed_theme_entry_policy(baseline_signal_history, apply_theme_risk=False)
+    relaxed_overlay_signal_history = apply_relaxed_theme_entry_policy(baseline_signal_history, apply_theme_risk=True)
+    relaxed_baseline_evaluated = evaluate_signal_history(relaxed_baseline_signal_history)
+    relaxed_overlay_evaluated = evaluate_signal_history(relaxed_overlay_signal_history)
+    relaxed_baseline_virtual_summary = summarize_virtual_trades(evaluate_virtual_trades(relaxed_baseline_signal_history))
+    relaxed_overlay_virtual_summary = summarize_virtual_trades(evaluate_virtual_trades(relaxed_overlay_signal_history))
+    relaxed_theme_risk_overlay_comparison = summarize_theme_risk_overlay_effect(
+        relaxed_baseline_signal_history,
+        relaxed_overlay_signal_history,
+        relaxed_baseline_evaluated,
+        relaxed_overlay_evaluated,
+        relaxed_baseline_virtual_summary,
+        relaxed_overlay_virtual_summary,
+    )
+    relaxed_theme_risk_overlay_blocks = summarize_theme_risk_overlay_blocks(
+        relaxed_baseline_signal_history,
+        relaxed_overlay_signal_history,
+    )
+    theme_risk_policy_mode_results = run_theme_risk_policy_mode_search(baseline_signal_history)
+    avoid_outcomes = evaluate_avoid_outcomes(signal_history)
+    avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
+    entry_parameter_results = run_entry_parameter_search(signal_history)
+    avoid_by_signal = summarize_avoid_outcomes_by_signal(avoid_outcomes)
+    avoid_policy_results = run_avoid_policy_search(avoid_outcomes)
+    output_path = write_replay_pdca_report(
+        signal_history,
+        signal_accuracy,
+        virtual_trades,
+        virtual_trade_summary,
+        avoid_outcomes,
+        avoid_summary,
+        entry_parameter_results,
+        avoid_by_signal,
+        avoid_policy_results,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        theme_risk_overlay_comparison,
+        relaxed_theme_risk_overlay_comparison,
+        theme_risk_policy_mode_results,
+        theme_risk_overlay_blocks,
+        relaxed_theme_risk_overlay_blocks,
+        None,
+        None,
+    )
+    logger.info("Quick replay PDCA report written: %s", output_path)
+    print(f"軽量履歴再生PDCAレポートを作成しました: {output_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="MASATO Tactical ETF Engine")
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["daily", "backtest", "optimize", "refine", "validate", "audit", "weekly", "replay"],
+        choices=["daily", "backtest", "optimize", "refine", "validate", "audit", "weekly", "replay", "replay-quick"],
         default="daily",
     )
     parser.add_argument("--refresh", action="store_true", help="価格データを再取得します")
@@ -1016,6 +1124,8 @@ def main() -> None:
         run_refine(refresh=args.refresh)
     elif args.command == "replay":
         run_replay(refresh=args.refresh)
+    elif args.command == "replay-quick":
+        run_replay_quick(refresh=args.refresh)
     elif args.command == "weekly":
         run_weekly()
     elif args.command == "audit":
