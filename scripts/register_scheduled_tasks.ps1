@@ -7,6 +7,8 @@ param(
     [string]$WeeklyTime = "08:00",
     [string]$ReplayQuickDay = "SUN",
     [string]$ReplayQuickTime = "08:30",
+    [string]$WeeklyHealthDay = "SUN",
+    [string]$WeeklyHealthTime = "08:50",
     [switch]$Force,
     [switch]$DryRun
 )
@@ -55,6 +57,13 @@ $Tasks = @(
         Schedule = "WEEKLY"
         Time = $ReplayQuickTime
         Day = $ReplayQuickDay
+    },
+    @{
+        Name = "$TaskPrefix Weekly Health"
+        Command = "weekly-health"
+        Schedule = "WEEKLY"
+        Time = $WeeklyHealthTime
+        Day = $WeeklyHealthDay
     }
 )
 

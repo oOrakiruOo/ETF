@@ -9,6 +9,7 @@ from src.report_engine import (
     write_notification_summary_report,
     write_portfolio_check_report,
     write_replay_pdca_report,
+    write_weekly_health_report,
 )
 
 
@@ -136,3 +137,20 @@ def test_write_daily_health_report_marks_missing_artifacts(tmp_path) -> None:
     text = output_path.read_text(encoding="utf-8")
     assert "判定: 要確認" in text
     assert "日次レポート" in text
+
+
+def test_write_weekly_health_report_marks_missing_artifacts(tmp_path) -> None:
+    health = pd.DataFrame(
+        [
+            {
+                "成果物": "週次PDCAレポート",
+                "状態": "Missing",
+                "サイズ": 0,
+                "パス": "reports/weekly/weekly_report_2099-01-01.md",
+            }
+        ]
+    )
+    output_path = write_weekly_health_report(health, output_dir=tmp_path, report_date=datetime(2099, 1, 1))
+    text = output_path.read_text(encoding="utf-8")
+    assert "判定: 要確認" in text
+    assert "週次PDCAレポート" in text

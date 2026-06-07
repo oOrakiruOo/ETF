@@ -247,6 +247,29 @@ def write_daily_health_report(
     return output_path
 
 
+def write_weekly_health_report(
+    health: pd.DataFrame,
+    output_dir: str | Path = "reports/weekly",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"weekly_health_{date:%Y-%m-%d}.md"
+    has_missing = not health.empty and health["状態"].ne("OK").any()
+    status_text = "要確認" if has_missing else "OK"
+    content = [
+        f"# weekly_health {date:%Y-%m-%d}",
+        "",
+        f"判定: {status_text}",
+        "",
+        "週次PDCAに必要な成果物が揃っているかを確認します。",
+        "",
+        health.to_markdown(index=False) if not health.empty else "評価なし",
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_weekly_pdca_report(
     backtest_summary: pd.DataFrame,
     parameter_results: pd.DataFrame,
