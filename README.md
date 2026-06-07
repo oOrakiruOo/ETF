@@ -110,6 +110,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command replay-quick
 ```
 
+タスクスケジューラへ日次・週次・軽量履歴再生をまとめて登録する場合は、まずドライランで内容を確認します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -DryRun
+```
+
+問題なければ以下で登録します。既存タスクを上書きする場合は `-Force` を付けます。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force
+```
+
 日次実行では、以下も同時に作成します。
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
