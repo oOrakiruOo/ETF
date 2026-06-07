@@ -133,7 +133,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
 - `reports/daily/notification_candidates_YYYY-MM-DD.md`
+- `data/processed/notifications/notification_outbox_YYYY-MM-DD.jsonl`
 - `data/processed/signals/signals_YYYY-MM-DD.csv`
+
+通知アウトボックスは外部送信用のJSONLです。現時点では自動送信せず、LINE/Slack/メールなどへ渡す前の安全な中間ファイルとして使います。
 
 週次レポートでは、保存済みの日次シグナルを読み込み、1営業日後・5営業日後・20営業日後のフォワードリターンを評価します。
 

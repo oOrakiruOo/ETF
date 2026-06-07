@@ -30,7 +30,11 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
-from .notification_engine import build_notification_candidates, build_portfolio_notification_candidates
+from .notification_engine import (
+    build_notification_candidates,
+    build_portfolio_notification_candidates,
+    write_notification_outbox,
+)
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
     evaluate_avoid_outcomes,
@@ -200,12 +204,15 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
         ignore_index=True,
     )
     notification_path = write_notification_report(notifications)
+    notification_outbox_path = write_notification_outbox(notifications)
     signal_snapshot_path = write_signal_snapshot(table)
     logger.info("Daily report written: %s", output_path)
     logger.info("Notification candidates written: %s", notification_path)
+    logger.info("Notification outbox written: %s", notification_outbox_path)
     logger.info("Signal snapshot written: %s", signal_snapshot_path)
     print(f"日次レポートを作成しました: {output_path}")
     print(f"通知候補を作成しました: {notification_path}")
+    print(f"通知アウトボックスを作成しました: {notification_outbox_path}")
     print(f"シグナル履歴を保存しました: {signal_snapshot_path}")
 
 

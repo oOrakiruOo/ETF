@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
+
+from .utils import PROJECT_ROOT, ensure_dir
 
 
 def build_notification(
@@ -148,3 +154,41 @@ def build_portfolio_notification_candidates(portfolio: pd.DataFrame) -> pd.DataF
             }
         )
     return pd.DataFrame(rows)
+
+
+def notification_payloads(notifications: pd.DataFrame, created_at: datetime | None = None) -> list[dict[str, object]]:
+    if notifications.empty:
+        return []
+    timestamp = (created_at or datetime.now()).isoformat(timespec="seconds")
+    payloads: list[dict[str, object]] = []
+    for row in notifications.to_dict("records"):
+        payloads.append(
+            {
+                "created_at": timestamp,
+                "ticker": row.get("ETF", ""),
+                "priority": row.get("優先度", ""),
+                "category": row.get("カテゴリ", ""),
+                "signal": row.get("シグナル", ""),
+                "reason": row.get("理由", ""),
+                "action": row.get("推奨行動", ""),
+                "current_price": row.get("現在価格", 0.0),
+                "target_price": row.get("目標価格", 0.0),
+                "stop_price": row.get("停止価格", 0.0),
+                "risk_reward": row.get("RR", 0.0),
+            }
+        )
+    return payloads
+
+
+def write_notification_outbox(
+    notifications: pd.DataFrame,
+    output_dir: str | Path = "data/processed/notifications",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"notification_outbox_{date:%Y-%m-%d}.jsonl"
+    payloads = notification_payloads(notifications, created_at=date)
+    lines = [json.dumps(payload, ensure_ascii=False) for payload in payloads]
+    output_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return output_path

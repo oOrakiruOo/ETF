@@ -7,6 +7,8 @@ from src.notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
     classify_notification_priority,
+    notification_payloads,
+    write_notification_outbox,
 )
 
 
@@ -105,3 +107,32 @@ def test_write_notification_report_groups_by_priority(tmp_path) -> None:
     assert "## High: 今日すぐ確認" in text
     assert "## Medium: 監視強化" in text
     assert text.index("BBB") < text.index("AAA")
+
+
+def test_write_notification_outbox_exports_jsonl(tmp_path) -> None:
+    notifications = pd.DataFrame(
+        [
+            {
+                "ETF": "SMH",
+                "優先度": "High",
+                "カテゴリ": "買い価格接近",
+                "現在価格": 100.0,
+                "シグナル": "買い候補",
+                "理由": "第1買い価格に接近",
+                "推奨行動": "第1買い条件を確認",
+                "購入割合": 25.0,
+                "目標価格": 120.0,
+                "停止価格": 90.0,
+                "RR": 2.2,
+            }
+        ]
+    )
+    path = write_notification_outbox(notifications, output_dir=tmp_path)
+    text = path.read_text(encoding="utf-8")
+    assert '"ticker": "SMH"' in text
+    assert '"priority": "High"' in text
+    assert '"category": "買い価格接近"' in text
+
+
+def test_notification_payloads_returns_empty_for_no_candidates() -> None:
+    assert notification_payloads(pd.DataFrame()) == []
