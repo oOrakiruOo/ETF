@@ -2,6 +2,7 @@ param(
     [string]$TaskPrefix = "MASATO ETF Rotation",
     [string]$PortfolioCheckTime = "07:20",
     [string]$DailyTime = "07:30",
+    [string]$NotificationSummaryTime = "07:35",
     [string]$DailyHealthTime = "07:40",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
@@ -35,6 +36,13 @@ $Tasks = @(
         Command = "daily"
         Schedule = "DAILY"
         Time = $DailyTime
+        Day = $null
+    },
+    @{
+        Name = "$TaskPrefix Notification Summary"
+        Command = "notification-summary"
+        Schedule = "DAILY"
+        Time = $NotificationSummaryTime
         Day = $null
     },
     @{
