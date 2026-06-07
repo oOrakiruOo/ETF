@@ -4,7 +4,12 @@ from datetime import datetime
 
 import pandas as pd
 
-from src.report_engine import write_notification_summary_report, write_portfolio_check_report, write_replay_pdca_report
+from src.report_engine import (
+    write_daily_health_report,
+    write_notification_summary_report,
+    write_portfolio_check_report,
+    write_replay_pdca_report,
+)
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:
@@ -114,3 +119,20 @@ def test_write_notification_summary_report_lists_priority_counts(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "## 優先度別件数" in text
     assert "SMH" in text
+
+
+def test_write_daily_health_report_marks_missing_artifacts(tmp_path) -> None:
+    health = pd.DataFrame(
+        [
+            {
+                "成果物": "日次レポート",
+                "状態": "Missing",
+                "サイズ": 0,
+                "パス": "reports/daily/daily_report_2099-01-01.md",
+            }
+        ]
+    )
+    output_path = write_daily_health_report(health, output_dir=tmp_path, report_date=datetime(2099, 1, 1))
+    text = output_path.read_text(encoding="utf-8")
+    assert "判定: 要確認" in text
+    assert "日次レポート" in text

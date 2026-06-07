@@ -38,6 +38,7 @@ from .notification_engine import (
     summarize_notification_payloads,
     write_notification_outbox,
 )
+from .operations_engine import check_daily_artifacts
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
     evaluate_avoid_outcomes,
@@ -57,6 +58,7 @@ from .report_engine import (
     build_signal_table,
     write_backtest_report,
     write_daily_report,
+    write_daily_health_report,
     write_notification_report,
     write_notification_summary_report,
     write_portfolio_check_report,
@@ -849,6 +851,14 @@ def run_notification_summary() -> None:
     print(f"通知要約レポートを作成しました: {output_path}")
 
 
+def run_daily_health() -> None:
+    setup_logging()
+    health = check_daily_artifacts()
+    output_path = write_daily_health_report(health)
+    logging.getLogger(__name__).info("Daily health report written: %s", output_path)
+    print(f"日次ヘルスチェックレポートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1223,6 +1233,7 @@ def main() -> None:
             "weekly",
             "portfolio-check",
             "notification-summary",
+            "daily-health",
             "replay",
             "replay-quick",
         ],
@@ -1243,6 +1254,8 @@ def main() -> None:
         run_portfolio_check()
     elif args.command == "notification-summary":
         run_notification_summary()
+    elif args.command == "daily-health":
+        run_daily_health()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

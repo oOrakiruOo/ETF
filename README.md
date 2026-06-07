@@ -144,6 +144,13 @@ python -m src.main notification-summary
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-summary
 ```
 
+日次成果物が揃ったかだけを確認する場合は、以下を使います。
+
+```powershell
+python -m src.main daily-health
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command daily-health
+```
+
 週次レポートでは、保存済みの日次シグナルを読み込み、1営業日後・5営業日後・20営業日後のフォワードリターンを評価します。
 
 ```powershell

@@ -2,6 +2,7 @@ param(
     [string]$TaskPrefix = "MASATO ETF Rotation",
     [string]$PortfolioCheckTime = "07:20",
     [string]$DailyTime = "07:30",
+    [string]$DailyHealthTime = "07:40",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
     [string]$ReplayQuickDay = "SUN",
@@ -32,6 +33,13 @@ $Tasks = @(
         Command = "daily"
         Schedule = "DAILY"
         Time = $DailyTime
+        Day = $null
+    },
+    @{
+        Name = "$TaskPrefix Daily Health"
+        Command = "daily-health"
+        Schedule = "DAILY"
+        Time = $DailyHealthTime
         Day = $null
     },
     @{
