@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("daily", "weekly", "replay-quick", "replay", "backtest")]
+    [ValidateSet("daily", "weekly", "portfolio-check", "replay-quick", "replay", "backtest")]
     [string]$Command = "daily",
     [switch]$Refresh
 )

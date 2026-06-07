@@ -24,12 +24,113 @@ PORTFOLIO_COLUMNS = [
     "status",
 ]
 
+PORTFOLIO_NUMERIC_COLUMNS = [
+    "quantity",
+    "avg_price",
+    "current_price",
+    "stop_price",
+    "target_price",
+]
+
+PORTFOLIO_REQUIRED_COLUMNS = ["ticker", "quantity", "avg_price"]
+
 
 def load_portfolio(path: str | Path = "data/portfolio/portfolio.csv") -> pd.DataFrame:
     file_path = PROJECT_ROOT / path if not Path(path).is_absolute() else Path(path)
     if not file_path.exists():
         return pd.DataFrame(columns=PORTFOLIO_COLUMNS)
     return pd.read_csv(file_path)
+
+
+def validate_portfolio(portfolio: pd.DataFrame) -> pd.DataFrame:
+    issues: list[dict[str, object]] = []
+    if portfolio.empty:
+        return pd.DataFrame(
+            [{"severity": "Info", "ticker": "", "column": "", "message": "保有CSVは空です"}]
+        )
+
+    for column in PORTFOLIO_REQUIRED_COLUMNS:
+        if column not in portfolio.columns:
+            issues.append(
+                {
+                    "severity": "Error",
+                    "ticker": "",
+                    "column": column,
+                    "message": "必須列がありません",
+                }
+            )
+    if issues:
+        return pd.DataFrame(issues)
+
+    frame = portfolio.copy()
+    frame["ticker"] = frame["ticker"].fillna("").astype(str).str.strip().str.upper()
+    for row_number, row in frame.iterrows():
+        ticker = str(row.get("ticker", "")).strip()
+        if not ticker:
+            issues.append(
+                {
+                    "severity": "Error",
+                    "ticker": "",
+                    "column": "ticker",
+                    "message": f"{row_number + 2}行目のtickerが空です",
+                }
+            )
+        for column in PORTFOLIO_NUMERIC_COLUMNS:
+            if column not in frame.columns:
+                continue
+            value = row.get(column, "")
+            if pd.isna(value) or value == "":
+                if column in {"stop_price", "target_price"}:
+                    issues.append(
+                        {
+                            "severity": "Warning",
+                            "ticker": ticker,
+                            "column": column,
+                            "message": "停止価格または目標価格が未入力です",
+                        }
+                    )
+                continue
+            numeric_value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+            if pd.isna(numeric_value):
+                issues.append(
+                    {
+                        "severity": "Error",
+                        "ticker": ticker,
+                        "column": column,
+                        "message": "数値として読めません",
+                    }
+                )
+            elif column in {"quantity", "avg_price"} and float(numeric_value) <= 0:
+                issues.append(
+                    {
+                        "severity": "Error",
+                        "ticker": ticker,
+                        "column": column,
+                        "message": "0より大きい値が必要です",
+                    }
+                )
+
+    duplicated = frame[frame["ticker"].ne("") & frame["ticker"].duplicated(keep=False)]
+    for ticker in sorted(set(duplicated["ticker"].tolist())):
+        issues.append(
+            {
+                "severity": "Warning",
+                "ticker": ticker,
+                "column": "ticker",
+                "message": "同じtickerが複数行あります",
+            }
+        )
+
+    if not issues:
+        issues.append(
+            {
+                "severity": "OK",
+                "ticker": "",
+                "column": "",
+                "message": "保有CSVの基本チェックはOKです",
+            }
+        )
+    return pd.DataFrame(issues)
 
 
 def update_portfolio_prices(portfolio: pd.DataFrame, prices: dict[str, float]) -> pd.DataFrame:

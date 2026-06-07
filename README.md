@@ -91,6 +91,11 @@ python -m src.main audit
 
 保有ETFは `data/portfolio/portfolio.csv` に入力します。
 日次レポート実行時に現在価格、時価、比率、含み損益を更新して表示します。
+日次実行前に入力漏れや数値ミスだけを確認する場合は、以下を使います。
+
+```powershell
+python -m src.main portfolio-check
+```
 
 ```powershell
 python -m src.main daily
@@ -101,6 +106,7 @@ Windowsタスクスケジューラから実行する場合は、PowerShellラッ
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command daily
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command portfolio-check
 ```
 
 週次PDCAや軽量履歴再生も同じ入口から実行できます。
@@ -110,7 +116,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command replay-quick
 ```
 
-タスクスケジューラへ日次・週次・軽量履歴再生をまとめて登録する場合は、まずドライランで内容を確認します。
+タスクスケジューラへ保有CSVチェック・日次・週次・軽量履歴再生をまとめて登録する場合は、まずドライランで内容を確認します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -DryRun

@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from src.report_engine import write_replay_pdca_report
+from src.report_engine import write_portfolio_check_report, write_replay_pdca_report
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:
@@ -77,3 +77,20 @@ def test_replay_report_action_items_show_relaxed_hybrid_tickers(tmp_path) -> Non
     )
     text = output_path.read_text(encoding="utf-8")
     assert "限定緩和SMH,SOXX ETF65+ テーマ65+ RR1.0+" in text
+
+
+def test_write_portfolio_check_report_marks_errors(tmp_path) -> None:
+    issues = pd.DataFrame(
+        [
+            {
+                "severity": "Error",
+                "ticker": "SMH",
+                "column": "quantity",
+                "message": "数値として読めません",
+            }
+        ]
+    )
+    output_path = write_portfolio_check_report(issues, output_dir=tmp_path, report_date=datetime(2026, 6, 8))
+    text = output_path.read_text(encoding="utf-8")
+    assert "判定: 要修正" in text
+    assert "数値として読めません" in text

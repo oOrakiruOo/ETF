@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.portfolio_engine import evaluate_portfolio_actions, update_portfolio_prices
+from src.portfolio_engine import evaluate_portfolio_actions, update_portfolio_prices, validate_portfolio
 
 
 def test_update_portfolio_prices_calculates_weights_and_pnl() -> None:
@@ -54,3 +54,33 @@ def test_evaluate_portfolio_actions_flags_stop_and_profit() -> None:
     evaluated = evaluate_portfolio_actions(portfolio)
     assert evaluated.loc[evaluated["ticker"] == "SMH", "portfolio_action"].iloc[0] == "損失確認"
     assert evaluated.loc[evaluated["ticker"] == "QQQ", "portfolio_action"].iloc[0] == "部分利確確認"
+
+
+def test_validate_portfolio_flags_invalid_numbers_and_duplicate_tickers() -> None:
+    portfolio = pd.DataFrame(
+        [
+            {"ticker": "SMH", "quantity": 2, "avg_price": 100.0, "stop_price": "", "target_price": 130.0},
+            {"ticker": "SMH", "quantity": "bad", "avg_price": 100.0, "stop_price": 90.0, "target_price": 130.0},
+        ]
+    )
+    issues = validate_portfolio(portfolio)
+    assert "数値として読めません" in issues["message"].tolist()
+    assert "同じtickerが複数行あります" in issues["message"].tolist()
+    assert "停止価格または目標価格が未入力です" in issues["message"].tolist()
+
+
+def test_validate_portfolio_returns_ok_for_basic_valid_rows() -> None:
+    portfolio = pd.DataFrame(
+        [
+            {
+                "ticker": "QQQ",
+                "quantity": 1,
+                "avg_price": 200.0,
+                "current_price": 210.0,
+                "stop_price": 180.0,
+                "target_price": 260.0,
+            },
+        ]
+    )
+    issues = validate_portfolio(portfolio)
+    assert issues.iloc[0]["severity"] == "OK"

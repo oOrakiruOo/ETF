@@ -171,6 +171,33 @@ def write_notification_report(
     return output_path
 
 
+def write_portfolio_check_report(
+    issues: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"portfolio_check_{date:%Y-%m-%d}.md"
+    if issues.empty:
+        issues_text = "評価なし"
+    else:
+        issues_text = issues.to_markdown(index=False)
+    has_error = not issues.empty and issues["severity"].eq("Error").any()
+    status_text = "要修正" if has_error else "確認OK"
+    content = [
+        f"# portfolio_check {date:%Y-%m-%d}",
+        "",
+        f"判定: {status_text}",
+        "",
+        "日次レポート前に、保有CSVの入力漏れや数値ミスを確認します。",
+        "",
+        issues_text,
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_weekly_pdca_report(
     backtest_summary: pd.DataFrame,
     parameter_results: pd.DataFrame,

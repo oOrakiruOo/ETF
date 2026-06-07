@@ -1,5 +1,6 @@
 param(
     [string]$TaskPrefix = "MASATO ETF Rotation",
+    [string]$PortfolioCheckTime = "07:20",
     [string]$DailyTime = "07:30",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
@@ -19,6 +20,13 @@ if (-not (Test-Path -LiteralPath $Runner)) {
 }
 
 $Tasks = @(
+    @{
+        Name = "$TaskPrefix Portfolio Check"
+        Command = "portfolio-check"
+        Schedule = "DAILY"
+        Time = $PortfolioCheckTime
+        Day = $null
+    },
     @{
         Name = "$TaskPrefix Daily"
         Command = "daily"

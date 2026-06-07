@@ -45,12 +45,13 @@ from .pdca_engine import (
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
-from .portfolio_engine import evaluate_portfolio_actions, load_portfolio, update_portfolio_prices
+from .portfolio_engine import evaluate_portfolio_actions, load_portfolio, update_portfolio_prices, validate_portfolio
 from .report_engine import (
     build_signal_table,
     write_backtest_report,
     write_daily_report,
     write_notification_report,
+    write_portfolio_check_report,
     write_parameter_search_report,
     write_regime_validation_report,
     write_replay_pdca_report,
@@ -814,6 +815,15 @@ def run_weekly() -> None:
     print(f"週次PDCAレポートを作成しました: {output_path}")
 
 
+def run_portfolio_check() -> None:
+    setup_logging()
+    portfolio = load_portfolio()
+    issues = validate_portfolio(portfolio)
+    output_path = write_portfolio_check_report(issues)
+    logging.getLogger(__name__).info("Portfolio check report written: %s", output_path)
+    print(f"保有CSVチェックレポートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1178,7 +1188,18 @@ def main() -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["daily", "backtest", "optimize", "refine", "validate", "audit", "weekly", "replay", "replay-quick"],
+        choices=[
+            "daily",
+            "backtest",
+            "optimize",
+            "refine",
+            "validate",
+            "audit",
+            "weekly",
+            "portfolio-check",
+            "replay",
+            "replay-quick",
+        ],
         default="daily",
     )
     parser.add_argument("--refresh", action="store_true", help="価格データを再取得します")
@@ -1192,6 +1213,8 @@ def main() -> None:
         run_replay_quick(refresh=args.refresh)
     elif args.command == "weekly":
         run_weekly()
+    elif args.command == "portfolio-check":
+        run_portfolio_check()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":
