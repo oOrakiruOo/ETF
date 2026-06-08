@@ -33,6 +33,8 @@ PORTFOLIO_NUMERIC_COLUMNS = [
 ]
 
 PORTFOLIO_REQUIRED_COLUMNS = ["ticker", "quantity", "avg_price"]
+ETF_MAX_WEIGHT_PCT = 10.0
+THEME_MAX_WEIGHT_PCT = 15.0
 
 
 def load_portfolio(path: str | Path = "data/portfolio/portfolio.csv") -> pd.DataFrame:
@@ -120,6 +122,32 @@ def validate_portfolio(portfolio: pd.DataFrame) -> pd.DataFrame:
                 "message": "同じtickerが複数行あります",
             }
         )
+
+    if "weight_pct" in frame.columns:
+        frame["weight_pct"] = pd.to_numeric(frame["weight_pct"], errors="coerce")
+        for row in frame.to_dict("records"):
+            weight_pct = row.get("weight_pct")
+            if pd.notna(weight_pct) and float(weight_pct) > ETF_MAX_WEIGHT_PCT:
+                issues.append(
+                    {
+                        "severity": "Warning",
+                        "ticker": row.get("ticker", ""),
+                        "column": "weight_pct",
+                        "message": f"ETF単体比率が{ETF_MAX_WEIGHT_PCT:.0f}%を超えています",
+                    }
+                )
+        if "theme" in frame.columns:
+            theme_weights = frame.dropna(subset=["weight_pct"]).groupby("theme", dropna=False)["weight_pct"].sum()
+            for theme, weight_pct in theme_weights.items():
+                if float(weight_pct) > THEME_MAX_WEIGHT_PCT:
+                    issues.append(
+                        {
+                            "severity": "Warning",
+                            "ticker": "",
+                            "column": "theme",
+                            "message": f"{theme}テーマ比率が{THEME_MAX_WEIGHT_PCT:.0f}%を超えています",
+                        }
+                    )
 
     if not issues:
         issues.append(

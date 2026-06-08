@@ -84,3 +84,28 @@ def test_validate_portfolio_returns_ok_for_basic_valid_rows() -> None:
     )
     issues = validate_portfolio(portfolio)
     assert issues.iloc[0]["severity"] == "OK"
+
+
+def test_validate_portfolio_flags_position_and_theme_concentration() -> None:
+    portfolio = pd.DataFrame(
+        [
+            {
+                "ticker": "SMH",
+                "theme": "半導体",
+                "quantity": 1,
+                "avg_price": 100.0,
+                "weight_pct": 12.0,
+            },
+            {
+                "ticker": "SOXX",
+                "theme": "半導体",
+                "quantity": 1,
+                "avg_price": 100.0,
+                "weight_pct": 8.0,
+            },
+        ]
+    )
+    issues = validate_portfolio(portfolio)
+    messages = issues["message"].tolist()
+    assert "ETF単体比率が10%を超えています" in messages
+    assert "半導体テーマ比率が15%を超えています" in messages
