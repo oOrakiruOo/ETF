@@ -35,6 +35,7 @@ from .notification_engine import (
     build_portfolio_notification_candidates,
     count_notification_priorities,
     load_notification_outbox,
+    notification_delivery_plan,
     summarize_notification_payloads,
     write_notification_outbox,
 )
@@ -59,6 +60,7 @@ from .report_engine import (
     write_backtest_report,
     write_daily_report,
     write_daily_health_report,
+    write_notification_delivery_plan_report,
     write_notification_report,
     write_notification_summary_report,
     write_portfolio_check_report,
@@ -852,6 +854,19 @@ def run_notification_summary() -> None:
     print(f"通知要約レポートを作成しました: {output_path}")
 
 
+def run_notification_plan() -> None:
+    setup_logging()
+    outbox_files = sorted((PROJECT_ROOT / "data" / "processed" / "notifications").glob("notification_outbox_*.jsonl"))
+    if not outbox_files:
+        raise FileNotFoundError("通知アウトボックスがありません。先に daily を実行してください。")
+    latest_outbox = outbox_files[-1]
+    payloads = load_notification_outbox(latest_outbox)
+    delivery_plan = notification_delivery_plan(payloads)
+    output_path = write_notification_delivery_plan_report(delivery_plan)
+    logging.getLogger(__name__).info("Notification delivery plan written: %s", output_path)
+    print(f"通知配送計画レポートを作成しました: {output_path}")
+
+
 def run_daily_health() -> None:
     setup_logging()
     health = check_daily_artifacts()
@@ -1242,6 +1257,7 @@ def main() -> None:
             "weekly",
             "portfolio-check",
             "notification-summary",
+            "notification-plan",
             "daily-health",
             "weekly-health",
             "replay",
@@ -1264,6 +1280,8 @@ def main() -> None:
         run_portfolio_check()
     elif args.command == "notification-summary":
         run_notification_summary()
+    elif args.command == "notification-plan":
+        run_notification_plan()
     elif args.command == "daily-health":
         run_daily_health()
     elif args.command == "weekly-health":

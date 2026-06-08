@@ -3,6 +3,7 @@ param(
     [string]$PortfolioCheckTime = "07:20",
     [string]$DailyTime = "07:30",
     [string]$NotificationSummaryTime = "07:35",
+    [string]$NotificationPlanTime = "07:37",
     [string]$DailyHealthTime = "07:40",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
@@ -43,6 +44,13 @@ $Tasks = @(
         Command = "notification-summary"
         Schedule = "DAILY"
         Time = $NotificationSummaryTime
+        Day = $null
+    },
+    @{
+        Name = "$TaskPrefix Notification Plan"
+        Command = "notification-plan"
+        Schedule = "DAILY"
+        Time = $NotificationPlanTime
         Day = $null
     },
     @{

@@ -197,6 +197,32 @@ def write_notification_summary_report(
     return output_path
 
 
+def write_notification_delivery_plan_report(
+    delivery_plan: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"notification_delivery_plan_{date:%Y-%m-%d}.md"
+    plan_text = delivery_plan.to_markdown(index=False) if not delivery_plan.empty else "通知候補なし"
+    content = [
+        f"# notification_delivery_plan {date:%Y-%m-%d}",
+        "",
+        "外部送信は行いません。通知候補を送信先へ接続する前の配送計画です。",
+        "",
+        "## 配送ルール",
+        "- High: manual_immediate。MASATOが当日すぐ確認",
+        "- Medium: daily_digest。日次確認にまとめる",
+        "- Low: archive_only。記録のみ",
+        "",
+        "## 配送計画",
+        plan_text,
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_portfolio_check_report(
     issues: pd.DataFrame,
     output_dir: str | Path = "reports/daily",

@@ -6,6 +6,7 @@ import pandas as pd
 
 from src.report_engine import (
     write_daily_health_report,
+    write_notification_delivery_plan_report,
     write_notification_summary_report,
     write_portfolio_check_report,
     write_replay_pdca_report,
@@ -119,6 +120,31 @@ def test_write_notification_summary_report_lists_priority_counts(tmp_path) -> No
     output_path = write_notification_summary_report(counts, summary, output_dir=tmp_path, report_date=datetime(2026, 6, 8))
     text = output_path.read_text(encoding="utf-8")
     assert "## 優先度別件数" in text
+    assert "SMH" in text
+
+
+def test_write_notification_delivery_plan_report_lists_routes(tmp_path) -> None:
+    delivery_plan = pd.DataFrame(
+        [
+            {
+                "優先度": "High",
+                "ETF": "SMH",
+                "配送先": "manual_immediate",
+                "確認タイミング": "当日すぐ確認",
+                "承認要否": "必要",
+                "カテゴリ": "買い価格接近",
+                "シグナル": "買い候補",
+                "推奨行動": "第1買い条件を確認",
+            }
+        ]
+    )
+    output_path = write_notification_delivery_plan_report(
+        delivery_plan,
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 8),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "manual_immediate" in text
     assert "SMH" in text
 
 

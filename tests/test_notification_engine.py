@@ -9,6 +9,7 @@ from src.notification_engine import (
     classify_notification_priority,
     count_notification_priorities,
     load_notification_outbox,
+    notification_delivery_plan,
     notification_payloads,
     summarize_notification_payloads,
     write_notification_outbox,
@@ -177,3 +178,18 @@ def test_load_and_summarize_notification_outbox(tmp_path) -> None:
     assert counts.set_index("優先度").loc["High", "件数"] == 1
     assert counts.set_index("優先度").loc["Medium", "件数"] == 1
     assert summary.iloc[0]["ETF"] == "AAA"
+
+
+def test_notification_delivery_plan_routes_by_priority() -> None:
+    payloads = [
+        {"ticker": "AAA", "priority": "High", "category": "停止価格接近", "signal": "売却候補", "action": "確認"},
+        {"ticker": "BBB", "priority": "Medium", "category": "監視強化", "signal": "見送り", "action": "監視"},
+        {"ticker": "CCC", "priority": "Low", "category": "参考", "signal": "押し目待ち", "action": "記録"},
+    ]
+    plan = notification_delivery_plan(payloads)
+    by_ticker = plan.set_index("ETF")
+    assert by_ticker.loc["AAA", "配送先"] == "manual_immediate"
+    assert by_ticker.loc["BBB", "配送先"] == "daily_digest"
+    assert by_ticker.loc["CCC", "配送先"] == "archive_only"
+    assert by_ticker.loc["AAA", "承認要否"] == "必要"
+    assert by_ticker.loc["CCC", "承認要否"] == "不要"

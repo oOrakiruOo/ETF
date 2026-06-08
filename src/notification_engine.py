@@ -229,6 +229,37 @@ def summarize_notification_payloads(payloads: list[dict[str, object]], top_n: in
     return pd.DataFrame(rows)
 
 
+def notification_delivery_plan(payloads: list[dict[str, object]]) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for payload in payloads:
+        priority = str(payload.get("priority", ""))
+        if priority == "High":
+            channel = "manual_immediate"
+            timing = "当日すぐ確認"
+            requires_approval = True
+        elif priority == "Medium":
+            channel = "daily_digest"
+            timing = "日次確認"
+            requires_approval = True
+        else:
+            channel = "archive_only"
+            timing = "記録のみ"
+            requires_approval = False
+        rows.append(
+            {
+                "優先度": priority,
+                "ETF": payload.get("ticker", ""),
+                "配送先": channel,
+                "確認タイミング": timing,
+                "承認要否": "必要" if requires_approval else "不要",
+                "カテゴリ": payload.get("category", ""),
+                "シグナル": payload.get("signal", ""),
+                "推奨行動": payload.get("action", ""),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def count_notification_priorities(payloads: list[dict[str, object]]) -> pd.DataFrame:
     counts: dict[str, int] = {"High": 0, "Medium": 0, "Low": 0}
     for payload in payloads:

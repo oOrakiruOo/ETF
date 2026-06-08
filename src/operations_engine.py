@@ -12,6 +12,7 @@ DAILY_HEALTH_ARTIFACTS = [
     ("日次レポート", "reports/daily/daily_report_{date}.md"),
     ("通知候補", "reports/daily/notification_candidates_{date}.md"),
     ("通知要約", "reports/daily/notification_summary_{date}.md"),
+    ("通知配送計画", "reports/daily/notification_delivery_plan_{date}.md"),
     ("保有CSVチェック", "reports/daily/portfolio_check_{date}.md"),
     ("通知アウトボックス", "data/processed/notifications/notification_outbox_{date}.jsonl"),
     ("シグナルCSV", "data/processed/signals/signals_{date}.csv"),
