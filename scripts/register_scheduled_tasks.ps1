@@ -4,6 +4,7 @@ param(
     [string]$DailyTime = "07:30",
     [string]$NotificationSummaryTime = "07:35",
     [string]$NotificationPlanTime = "07:37",
+    [string]$NotificationPacketsTime = "07:38",
     [string]$DailyHealthTime = "07:40",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
@@ -51,6 +52,13 @@ $Tasks = @(
         Command = "notification-plan"
         Schedule = "DAILY"
         Time = $NotificationPlanTime
+        Day = $null
+    },
+    @{
+        Name = "$TaskPrefix Notification Packets"
+        Command = "notification-packets"
+        Schedule = "DAILY"
+        Time = $NotificationPacketsTime
         Day = $null
     },
     @{

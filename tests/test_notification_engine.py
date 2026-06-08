@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import pandas as pd
 
 from src.report_engine import write_notification_report
@@ -12,6 +14,7 @@ from src.notification_engine import (
     notification_delivery_plan,
     notification_payloads,
     summarize_notification_payloads,
+    write_delivery_packets,
     write_notification_outbox,
 )
 
@@ -193,3 +196,40 @@ def test_notification_delivery_plan_routes_by_priority() -> None:
     assert by_ticker.loc["CCC", "配送先"] == "archive_only"
     assert by_ticker.loc["AAA", "承認要否"] == "必要"
     assert by_ticker.loc["CCC", "承認要否"] == "不要"
+
+
+def test_write_delivery_packets_splits_by_delivery_target(tmp_path) -> None:
+    payloads = [
+        {
+            "ticker": "AAA",
+            "priority": "High",
+            "category": "停止価格接近",
+            "signal": "売却候補",
+            "reason": "停止価格に接近",
+            "action": "確認",
+            "current_price": 80.0,
+            "target_price": 100.0,
+            "stop_price": 82.0,
+            "risk_reward": 0.5,
+        },
+        {
+            "ticker": "BBB",
+            "priority": "Medium",
+            "category": "監視強化",
+            "signal": "見送り",
+            "reason": "ETFスコア70超え",
+            "action": "監視",
+            "current_price": 100.0,
+            "target_price": 120.0,
+            "stop_price": 90.0,
+            "risk_reward": 1.0,
+        },
+    ]
+    paths = write_delivery_packets(payloads, output_dir=tmp_path, report_date=datetime(2026, 6, 8))
+    by_name = {path.name: path for path in paths}
+    immediate = by_name["notification_packets_manual_immediate_2026-06-08.jsonl"]
+    digest = by_name["notification_packets_daily_digest_2026-06-08.jsonl"]
+    archive = by_name["notification_packets_archive_only_2026-06-08.jsonl"]
+    assert '"ticker": "AAA"' in immediate.read_text(encoding="utf-8")
+    assert '"ticker": "BBB"' in digest.read_text(encoding="utf-8")
+    assert archive.read_text(encoding="utf-8") == ""

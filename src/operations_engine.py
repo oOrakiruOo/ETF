@@ -8,6 +8,8 @@ import pandas as pd
 from .utils import PROJECT_ROOT
 
 
+ArtifactSpec = tuple[str, str] | tuple[str, str, bool]
+
 DAILY_HEALTH_ARTIFACTS = [
     ("日次レポート", "reports/daily/daily_report_{date}.md"),
     ("通知候補", "reports/daily/notification_candidates_{date}.md"),
@@ -15,6 +17,9 @@ DAILY_HEALTH_ARTIFACTS = [
     ("通知配送計画", "reports/daily/notification_delivery_plan_{date}.md"),
     ("保有CSVチェック", "reports/daily/portfolio_check_{date}.md"),
     ("通知アウトボックス", "data/processed/notifications/notification_outbox_{date}.jsonl"),
+    ("即時通知パケット", "data/processed/notifications/notification_packets_manual_immediate_{date}.jsonl", True),
+    ("日次通知パケット", "data/processed/notifications/notification_packets_daily_digest_{date}.jsonl", True),
+    ("記録通知パケット", "data/processed/notifications/notification_packets_archive_only_{date}.jsonl", True),
     ("シグナルCSV", "data/processed/signals/signals_{date}.csv"),
 ]
 
@@ -33,21 +38,24 @@ WEEKLY_HEALTH_ARTIFACTS = [
 
 
 def check_artifacts(
-    artifacts: list[tuple[str, str]],
+    artifacts: list[ArtifactSpec],
     report_date: datetime | None = None,
 ) -> pd.DataFrame:
     date = report_date or datetime.now()
     date_text = f"{date:%Y-%m-%d}"
     rows: list[dict[str, object]] = []
-    for name, template in artifacts:
+    for artifact in artifacts:
+        name, template = artifact[:2]
+        allow_empty = bool(artifact[2]) if len(artifact) > 2 else False
         relative_path = Path(template.format(date=date_text))
         path = PROJECT_ROOT / relative_path
         exists = path.exists()
         size = path.stat().st_size if exists else 0
+        ok = exists and (size > 0 or allow_empty)
         rows.append(
             {
                 "成果物": name,
-                "状態": "OK" if exists and size > 0 else "Missing",
+                "状態": "OK" if ok else "Missing",
                 "サイズ": size,
                 "パス": str(path),
             }

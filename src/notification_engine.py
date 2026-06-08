@@ -260,6 +260,58 @@ def notification_delivery_plan(payloads: list[dict[str, object]]) -> pd.DataFram
     return pd.DataFrame(rows)
 
 
+def build_delivery_packets(payloads: list[dict[str, object]]) -> list[dict[str, object]]:
+    plan = notification_delivery_plan(payloads)
+    if plan.empty:
+        return []
+    payload_by_ticker = {str(payload.get("ticker", "")): payload for payload in payloads}
+    packets: list[dict[str, object]] = []
+    for row in plan.to_dict("records"):
+        ticker = str(row.get("ETF", ""))
+        payload = payload_by_ticker.get(ticker, {})
+        packets.append(
+            {
+                "delivery_target": row.get("配送先", ""),
+                "requires_approval": row.get("承認要否") == "必要",
+                "ticker": ticker,
+                "priority": row.get("優先度", ""),
+                "category": row.get("カテゴリ", ""),
+                "signal": row.get("シグナル", ""),
+                "action": row.get("推奨行動", ""),
+                "message": build_notification(
+                    ticker=ticker,
+                    current_price=float(payload.get("current_price", 0.0) or 0.0),
+                    signal=str(payload.get("signal", "")),
+                    reason=str(payload.get("reason", "")),
+                    action=str(payload.get("action", "")),
+                    allocation_pct=0.0,
+                    target_price=float(payload.get("target_price", 0.0) or 0.0),
+                    stop_price=float(payload.get("stop_price", 0.0) or 0.0),
+                    risk_reward=float(payload.get("risk_reward", 0.0) or 0.0),
+                ),
+            }
+        )
+    return packets
+
+
+def write_delivery_packets(
+    payloads: list[dict[str, object]],
+    output_dir: str | Path = "data/processed/notifications",
+    report_date: datetime | None = None,
+) -> list[Path]:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    packets = build_delivery_packets(payloads)
+    paths: list[Path] = []
+    for target in ["manual_immediate", "daily_digest", "archive_only"]:
+        target_packets = [packet for packet in packets if packet.get("delivery_target") == target]
+        output_path = PROJECT_ROOT / directory / f"notification_packets_{target}_{date:%Y-%m-%d}.jsonl"
+        lines = [json.dumps(packet, ensure_ascii=False) for packet in target_packets]
+        output_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+        paths.append(output_path)
+    return paths
+
+
 def count_notification_priorities(payloads: list[dict[str, object]]) -> pd.DataFrame:
     counts: dict[str, int] = {"High": 0, "Medium": 0, "Low": 0}
     for payload in payloads:
