@@ -296,6 +296,29 @@ def write_weekly_health_report(
     return output_path
 
 
+def write_operations_status_report(
+    status: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"operations_status_{date:%Y-%m-%d}.md"
+    needs_attention = not status.empty and status["状態"].ne("OK").any()
+    status_text = "要確認" if needs_attention else "OK"
+    content = [
+        f"# operations_status {date:%Y-%m-%d}",
+        "",
+        f"判定: {status_text}",
+        "",
+        "本運用に必要な日次・週次成果物の最新状態を確認します。",
+        "",
+        status.to_markdown(index=False) if not status.empty else "評価なし",
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_weekly_pdca_report(
     backtest_summary: pd.DataFrame,
     parameter_results: pd.DataFrame,

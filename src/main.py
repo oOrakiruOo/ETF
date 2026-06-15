@@ -40,7 +40,7 @@ from .notification_engine import (
     write_delivery_packets,
     write_notification_outbox,
 )
-from .operations_engine import check_daily_artifacts, check_weekly_artifacts
+from .operations_engine import check_daily_artifacts, check_operations_status, check_weekly_artifacts
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
     evaluate_avoid_outcomes,
@@ -64,6 +64,7 @@ from .report_engine import (
     write_notification_delivery_plan_report,
     write_notification_report,
     write_notification_summary_report,
+    write_operations_status_report,
     write_portfolio_check_report,
     write_parameter_search_report,
     write_regime_validation_report,
@@ -898,6 +899,14 @@ def run_weekly_health() -> None:
     print(f"週次ヘルスチェックレポートを作成しました: {output_path}")
 
 
+def run_operations_status() -> None:
+    setup_logging()
+    status = check_operations_status()
+    output_path = write_operations_status_report(status)
+    logging.getLogger(__name__).info("Operations status report written: %s", output_path)
+    print(f"運用ステータスレポートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1276,6 +1285,7 @@ def main() -> None:
             "notification-packets",
             "daily-health",
             "weekly-health",
+            "operations-status",
             "replay",
             "replay-quick",
         ],
@@ -1304,6 +1314,8 @@ def main() -> None:
         run_daily_health()
     elif args.command == "weekly-health":
         run_weekly_health()
+    elif args.command == "operations-status":
+        run_operations_status()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

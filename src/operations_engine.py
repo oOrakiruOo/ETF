@@ -36,6 +36,16 @@ WEEKLY_HEALTH_ARTIFACTS = [
     ("回避方針総当たり", "data/processed/signals/replay_avoid_policy_search_{date}.csv"),
 ]
 
+OPERATIONS_STATUS_ARTIFACTS = [
+    ("日次ヘルス", "reports/daily", "daily_health_*.md", 1, False),
+    ("日次レポート", "reports/daily", "daily_report_*.md", 1, False),
+    ("通知配送計画", "reports/daily", "notification_delivery_plan_*.md", 1, False),
+    ("日次通知パケット", "data/processed/notifications", "notification_packets_daily_digest_*.jsonl", 1, True),
+    ("週次ヘルス", "reports/weekly", "weekly_health_*.md", 8, False),
+    ("週次PDCAレポート", "reports/weekly", "weekly_report_*.md", 8, False),
+    ("軽量履歴再生レポート", "reports/weekly", "replay_pdca_report_*.md", 8, False),
+]
+
 
 def check_artifacts(
     artifacts: list[ArtifactSpec],
@@ -69,3 +79,50 @@ def check_daily_artifacts(report_date: datetime | None = None) -> pd.DataFrame:
 
 def check_weekly_artifacts(report_date: datetime | None = None) -> pd.DataFrame:
     return check_artifacts(WEEKLY_HEALTH_ARTIFACTS, report_date)
+
+
+def _date_from_stem(path: Path) -> datetime | None:
+    try:
+        return datetime.strptime(path.stem[-10:], "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def check_operations_status(
+    report_date: datetime | None = None,
+    project_root: Path = PROJECT_ROOT,
+) -> pd.DataFrame:
+    date = report_date or datetime.now()
+    rows: list[dict[str, object]] = []
+    for name, folder, pattern, max_age_days, allow_empty in OPERATIONS_STATUS_ARTIFACTS:
+        directory = project_root / folder
+        paths = sorted(directory.glob(pattern)) if directory.exists() else []
+        dated_paths = [(path_date, path) for path in paths if (path_date := _date_from_stem(path)) is not None]
+        if not dated_paths:
+            rows.append(
+                {
+                    "確認項目": name,
+                    "状態": "Missing",
+                    "最新日": "",
+                    "経過日数": "",
+                    "サイズ": 0,
+                    "パス": str(directory / pattern),
+                }
+            )
+            continue
+        latest_date, latest_path = max(dated_paths, key=lambda item: item[0])
+        age_days = (date.date() - latest_date.date()).days
+        size = latest_path.stat().st_size
+        fresh = age_days <= int(max_age_days)
+        has_content = size > 0 or bool(allow_empty)
+        rows.append(
+            {
+                "確認項目": name,
+                "状態": "OK" if fresh and has_content else "Stale",
+                "最新日": f"{latest_date:%Y-%m-%d}",
+                "経過日数": age_days,
+                "サイズ": size,
+                "パス": str(latest_path),
+            }
+        )
+    return pd.DataFrame(rows)
