@@ -128,6 +128,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 ```
 
 問題なければ以下で登録します。既存タスクを上書きする場合は `-Force` を付けます。
+登録時はノートPC運用を想定し、バッテリー中でも開始・継続できるように電源条件を外します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1

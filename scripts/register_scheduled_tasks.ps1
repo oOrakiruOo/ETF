@@ -13,6 +13,7 @@ param(
     [string]$ReplayQuickTime = "08:30",
     [string]$WeeklyHealthDay = "SUN",
     [string]$WeeklyHealthTime = "08:50",
+    [bool]$AllowStartOnBattery = $true,
     [switch]$Force,
     [switch]$DryRun
 )
@@ -132,5 +133,12 @@ foreach ($Task in $Tasks) {
     & schtasks.exe @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to register scheduled task: $($Task.Name)"
+    }
+
+    if ($AllowStartOnBattery) {
+        $RegisteredTask = Get-ScheduledTask -TaskName $Task.Name
+        $RegisteredTask.Settings.DisallowStartIfOnBatteries = $false
+        $RegisteredTask.Settings.StopIfGoingOnBatteries = $false
+        Set-ScheduledTask -InputObject $RegisteredTask | Out-Null
     }
 }
