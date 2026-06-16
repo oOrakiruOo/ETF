@@ -333,6 +333,7 @@ def write_weekly_pdca_report(
     avoid_summary: pd.DataFrame | None = None,
     avoid_policy_name: str = "current_all_avoid",
     output_dir: str | Path = "reports/weekly",
+    processed_output_dir: str | Path = "data/processed/pdca",
     report_date: datetime | None = None,
 ) -> Path:
     date = report_date or datetime.now()
@@ -389,6 +390,21 @@ def write_weekly_pdca_report(
         action_items.append("バックテストサマリー未作成。`python -m src.main backtest` を実行")
     if signal_improvement_proposals:
         action_items.extend(signal_improvement_proposals)
+    action_path = PROJECT_ROOT / ensure_dir(processed_output_dir) / f"weekly_action_items_{date:%Y-%m-%d}.csv"
+    action_table = pd.DataFrame(
+        [
+            {
+                "report_date": f"{date:%Y-%m-%d}",
+                "item_id": index,
+                "status": "open",
+                "source": "weekly_pdca",
+                "action_item": item,
+            }
+            for index, item in enumerate(action_items, start=1)
+        ],
+        columns=["report_date", "item_id", "status", "source", "action_item"],
+    )
+    action_table.to_csv(action_path, index=False)
     content = [
         f"# weekly_report {date:%Y-%m-%d}",
         "",
@@ -432,6 +448,8 @@ def write_weekly_pdca_report(
         "",
         "## PDCA: Act",
         *[f"- {item}" for item in action_items],
+        "",
+        f"Act項目CSV: `{action_path}`",
     ]
     output_path.write_text("\n".join(content), encoding="utf-8")
     return output_path

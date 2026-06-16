@@ -11,6 +11,7 @@ from src.report_engine import (
     write_portfolio_check_report,
     write_replay_pdca_report,
     write_weekly_health_report,
+    write_weekly_pdca_report,
 )
 
 
@@ -84,6 +85,39 @@ def test_replay_report_action_items_show_relaxed_hybrid_tickers(tmp_path) -> Non
     )
     text = output_path.read_text(encoding="utf-8")
     assert "限定緩和SMH,SOXX ETF65+ テーマ65+ RR1.0+" in text
+
+
+def test_weekly_report_writes_action_item_tracker(tmp_path) -> None:
+    report_dir = tmp_path / "reports"
+    processed_dir = tmp_path / "processed"
+    parameter_results = pd.DataFrame(
+        [
+            {
+                "satellite_weight_pct": 35.0,
+                "top_satellites": 4,
+                "drawdown_stop_pct": -15.0,
+                "score_profile": "balanced",
+            }
+        ]
+    )
+
+    output_path = write_weekly_pdca_report(
+        pd.DataFrame(),
+        parameter_results,
+        pd.DataFrame(),
+        signal_improvement_proposals=["フォワード評価を翌週も確認"],
+        output_dir=report_dir,
+        processed_output_dir=processed_dir,
+        report_date=datetime(2026, 6, 15),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    tracker_path = processed_dir / "weekly_action_items_2026-06-15.csv"
+    tracker = pd.read_csv(tracker_path)
+    assert "Act項目CSV" in text
+    assert set(tracker["status"]) == {"open"}
+    assert len(tracker) == 3
+    assert "フォワード評価を翌週も確認" in tracker["action_item"].tolist()
 
 
 def test_write_portfolio_check_report_marks_errors(tmp_path) -> None:
