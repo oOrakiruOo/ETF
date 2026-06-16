@@ -139,6 +139,8 @@ foreach ($Task in $Tasks) {
         $RegisteredTask = Get-ScheduledTask -TaskName $Task.Name
         $RegisteredTask.Settings.DisallowStartIfOnBatteries = $false
         $RegisteredTask.Settings.StopIfGoingOnBatteries = $false
+        $RegisteredTask.Settings.StartWhenAvailable = $true
+        $RegisteredTask.Settings.WakeToRun = $true
         Set-ScheduledTask -InputObject $RegisteredTask | Out-Null
     }
 }
