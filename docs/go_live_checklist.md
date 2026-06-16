@@ -11,7 +11,8 @@
 
 1. `reports/weekly/weekly_health_YYYY-MM-DD.md` の判定が `OK`
 2. `reports/weekly/weekly_report_YYYY-MM-DD.md` の PDCA: Act を確認
-3. `reports/weekly/replay_pdca_report_YYYY-MM-DD.md` で弱点局面と見送り評価を確認
+3. `data/processed/pdca/weekly_action_items_YYYY-MM-DD.csv` で翌週に追う改善項目を確認
+4. `reports/weekly/replay_pdca_report_YYYY-MM-DD.md` で弱点局面と見送り評価を確認
 
 ## 要確認が出た場合
 

@@ -196,6 +196,7 @@ python -m src.main weekly
 週次実行では、以下も作成します。
 
 - `reports/weekly/weekly_report_YYYY-MM-DD.md`
+- `data/processed/pdca/weekly_action_items_YYYY-MM-DD.csv`
 - `data/processed/signals/signal_forward_returns_YYYY-MM-DD.csv`
 - `data/processed/signals/virtual_trades_YYYY-MM-DD.csv`
 - `data/processed/signals/avoid_outcomes_YYYY-MM-DD.csv`
