@@ -40,7 +40,12 @@ from .notification_engine import (
     write_delivery_packets,
     write_notification_outbox,
 )
-from .operations_engine import check_daily_artifacts, check_operations_status, check_weekly_artifacts
+from .operations_engine import (
+    check_daily_artifacts,
+    check_go_live_readiness,
+    check_operations_status,
+    check_weekly_artifacts,
+)
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
     evaluate_avoid_outcomes,
@@ -60,6 +65,7 @@ from .report_engine import (
     build_signal_table,
     write_backtest_report,
     write_daily_report,
+    write_go_live_readiness_report,
     write_daily_health_report,
     write_notification_delivery_plan_report,
     write_notification_report,
@@ -907,6 +913,14 @@ def run_operations_status() -> None:
     print(f"運用ステータスレポートを作成しました: {output_path}")
 
 
+def run_go_live_check() -> None:
+    setup_logging()
+    readiness = check_go_live_readiness()
+    output_path = write_go_live_readiness_report(readiness)
+    logging.getLogger(__name__).info("Go-live readiness report written: %s", output_path)
+    print(f"本運用GO/HOLD判定レポートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1286,6 +1300,7 @@ def main() -> None:
             "daily-health",
             "weekly-health",
             "operations-status",
+            "go-live-check",
             "replay",
             "replay-quick",
         ],
@@ -1316,6 +1331,8 @@ def main() -> None:
         run_weekly_health()
     elif args.command == "operations-status":
         run_operations_status()
+    elif args.command == "go-live-check":
+        run_go_live_check()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

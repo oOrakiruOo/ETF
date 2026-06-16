@@ -112,6 +112,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-plan
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-packets
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command operations-status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command go-live-check
 ```
 
 週次PDCAや軽量履歴再生も同じ入口から実行できます。
@@ -122,7 +123,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command weekly-health
 ```
 
-タスクスケジューラへ保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・日次ヘルスチェック・運用ステータス・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
+タスクスケジューラへ保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・日次ヘルスチェック・運用ステータス・本運用GO/HOLD判定・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -DryRun
@@ -178,6 +179,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 ```powershell
 python -m src.main operations-status
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command operations-status
+```
+
+本運用に進む前のGO/HOLD判定を確認する場合は、以下を使います。`GO（手動確認後）` でも実売買は自動実行せず、日次レポートと通知計画を確認してから判断します。
+
+```powershell
+python -m src.main go-live-check
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command go-live-check
 ```
 
 週次PDCA成果物が揃ったかだけを確認する場合は、以下を使います。

@@ -6,6 +6,7 @@ import pandas as pd
 
 from src.report_engine import (
     write_daily_health_report,
+    write_go_live_readiness_report,
     write_notification_delivery_plan_report,
     write_notification_summary_report,
     write_portfolio_check_report,
@@ -254,3 +255,28 @@ def test_write_weekly_health_report_marks_missing_artifacts(tmp_path) -> None:
     text = output_path.read_text(encoding="utf-8")
     assert "判定: 要確認" in text
     assert "週次PDCAレポート" in text
+
+
+def test_write_go_live_readiness_report_marks_hold_when_blocked(tmp_path) -> None:
+    readiness = pd.DataFrame(
+        [
+            {"判定項目": "運用成果物", "状態": "Block", "理由": "不足あり"},
+            {"判定項目": "売買実行", "状態": "Review", "理由": "手動判断"},
+        ]
+    )
+    output_path = write_go_live_readiness_report(readiness, output_dir=tmp_path, report_date=datetime(2099, 1, 1))
+    text = output_path.read_text(encoding="utf-8")
+    assert "判定: HOLD" in text
+    assert "運用成果物" in text
+
+
+def test_write_go_live_readiness_report_marks_go_after_manual_review(tmp_path) -> None:
+    readiness = pd.DataFrame(
+        [
+            {"判定項目": "運用成果物", "状態": "OK", "理由": "成果物OK"},
+            {"判定項目": "売買実行", "状態": "Review", "理由": "手動判断"},
+        ]
+    )
+    output_path = write_go_live_readiness_report(readiness, output_dir=tmp_path, report_date=datetime(2099, 1, 1))
+    text = output_path.read_text(encoding="utf-8")
+    assert "判定: GO（手動確認後）" in text

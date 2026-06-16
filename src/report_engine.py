@@ -319,6 +319,29 @@ def write_operations_status_report(
     return output_path
 
 
+def write_go_live_readiness_report(
+    readiness: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"go_live_readiness_{date:%Y-%m-%d}.md"
+    has_block = not readiness.empty and readiness["状態"].eq("Block").any()
+    status_text = "HOLD" if has_block else "GO（手動確認後）"
+    content = [
+        f"# go_live_readiness {date:%Y-%m-%d}",
+        "",
+        f"判定: {status_text}",
+        "",
+        "本運用の実行前に確認するGO/HOLD判定です。実売買は自動実行しません。",
+        "",
+        readiness.to_markdown(index=False) if not readiness.empty else "評価なし",
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_weekly_pdca_report(
     backtest_summary: pd.DataFrame,
     parameter_results: pd.DataFrame,

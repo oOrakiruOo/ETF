@@ -4,8 +4,9 @@
 
 1. `reports/daily/operations_status_YYYY-MM-DD.md` の判定が `OK`
 2. `reports/daily/daily_health_YYYY-MM-DD.md` の判定が `OK`
-3. `reports/daily/notification_delivery_plan_YYYY-MM-DD.md` で High / Medium を確認
-4. 実売買は自動実行しない。MASATOが最終判断する
+3. `reports/daily/go_live_readiness_YYYY-MM-DD.md` の判定が `GO（手動確認後）`
+4. `reports/daily/notification_delivery_plan_YYYY-MM-DD.md` で High / Medium を確認
+5. 実売買は自動実行しない。MASATOが最終判断する
 
 ## 週次
 

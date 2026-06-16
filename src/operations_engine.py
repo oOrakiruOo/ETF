@@ -52,6 +52,7 @@ OPERATIONS_STATUS_ARTIFACTS = [
 def check_artifacts(
     artifacts: list[ArtifactSpec],
     report_date: datetime | None = None,
+    project_root: Path = PROJECT_ROOT,
 ) -> pd.DataFrame:
     date = report_date or datetime.now()
     date_text = f"{date:%Y-%m-%d}"
@@ -60,7 +61,7 @@ def check_artifacts(
         name, template = artifact[:2]
         allow_empty = bool(artifact[2]) if len(artifact) > 2 else False
         relative_path = Path(template.format(date=date_text))
-        path = PROJECT_ROOT / relative_path
+        path = relative_path if relative_path.is_absolute() else project_root / relative_path
         exists = path.exists()
         size = path.stat().st_size if exists else 0
         ok = exists and (size > 0 or allow_empty)
@@ -75,12 +76,12 @@ def check_artifacts(
     return pd.DataFrame(rows)
 
 
-def check_daily_artifacts(report_date: datetime | None = None) -> pd.DataFrame:
-    return check_artifacts(DAILY_HEALTH_ARTIFACTS, report_date)
+def check_daily_artifacts(report_date: datetime | None = None, project_root: Path = PROJECT_ROOT) -> pd.DataFrame:
+    return check_artifacts(DAILY_HEALTH_ARTIFACTS, report_date, project_root)
 
 
-def check_weekly_artifacts(report_date: datetime | None = None) -> pd.DataFrame:
-    return check_artifacts(WEEKLY_HEALTH_ARTIFACTS, report_date)
+def check_weekly_artifacts(report_date: datetime | None = None, project_root: Path = PROJECT_ROOT) -> pd.DataFrame:
+    return check_artifacts(WEEKLY_HEALTH_ARTIFACTS, report_date, project_root)
 
 
 def _date_from_stem(path: Path) -> datetime | None:
@@ -99,6 +100,56 @@ def _weekly_action_note(path: Path) -> str:
         return "未完了Act 0件"
     open_count = int((~actions["status"].astype(str).str.lower().isin(["done", "closed"])).sum())
     return f"未完了Act {open_count}件"
+
+
+def _latest_dated_file(project_root: Path, folder: str, pattern: str) -> Path | None:
+    directory = project_root / folder
+    paths = sorted(directory.glob(pattern)) if directory.exists() else []
+    dated_paths = [(path_date, path) for path in paths if (path_date := _date_from_stem(path)) is not None]
+    if not dated_paths:
+        return None
+    return max(dated_paths, key=lambda item: item[0])[1]
+
+
+def check_go_live_readiness(
+    report_date: datetime | None = None,
+    project_root: Path = PROJECT_ROOT,
+) -> pd.DataFrame:
+    date = report_date or datetime.now()
+    operation_status = check_operations_status(date, project_root)
+    daily_health = check_daily_artifacts(date, project_root)
+    weekly_health = check_weekly_artifacts(date, project_root)
+    latest_action_path = _latest_dated_file(project_root, "data/processed/pdca", "weekly_action_items_*.csv")
+    action_note = _weekly_action_note(latest_action_path) if latest_action_path is not None else "週次Act追跡なし"
+
+    gates = [
+        {
+            "判定項目": "運用成果物",
+            "状態": "OK" if not operation_status.empty and operation_status["状態"].eq("OK").all() else "Block",
+            "理由": "日次・週次の最新成果物が揃っているか",
+        },
+        {
+            "判定項目": "日次ヘルス",
+            "状態": "OK" if not daily_health.empty and daily_health["状態"].eq("OK").all() else "Block",
+            "理由": "当日の日次成果物が全て揃っているか",
+        },
+        {
+            "判定項目": "週次ヘルス",
+            "状態": "OK" if not weekly_health.empty and weekly_health["状態"].eq("OK").all() else "Block",
+            "理由": "直近週次PDCAと履歴再生成果物が揃っているか",
+        },
+        {
+            "判定項目": "週次Act",
+            "状態": "Review",
+            "理由": action_note,
+        },
+        {
+            "判定項目": "売買実行",
+            "状態": "Review",
+            "理由": "実売買は自動実行せず、通知計画と日次レポートを確認してMASATOが最終判断",
+        },
+    ]
+    return pd.DataFrame(gates)
 
 
 def check_operations_status(

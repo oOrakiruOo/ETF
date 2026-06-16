@@ -4,7 +4,13 @@ from datetime import datetime
 
 import pandas as pd
 
-from src.operations_engine import check_artifacts, check_daily_artifacts, check_operations_status, check_weekly_artifacts
+from src.operations_engine import (
+    check_artifacts,
+    check_daily_artifacts,
+    check_go_live_readiness,
+    check_operations_status,
+    check_weekly_artifacts,
+)
 
 
 def test_check_daily_artifacts_returns_expected_rows() -> None:
@@ -76,3 +82,10 @@ def test_check_operations_status_shows_open_weekly_action_count(tmp_path) -> Non
     weekly_actions = status[status["確認項目"].eq("週次Act追跡")].iloc[0]
     assert weekly_actions["状態"] == "OK"
     assert weekly_actions["補足"] == "未完了Act 1件"
+
+
+def test_check_go_live_readiness_blocks_when_artifacts_are_missing(tmp_path) -> None:
+    readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
+    blockers = readiness[readiness["状態"].eq("Block")]
+    assert {"運用成果物", "日次ヘルス", "週次ヘルス"}.issubset(set(blockers["判定項目"]))
+    assert "売買実行" in set(readiness[readiness["状態"].eq("Review")]["判定項目"])
