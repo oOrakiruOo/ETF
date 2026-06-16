@@ -121,9 +121,10 @@ def check_go_live_readiness(
     date = report_date or datetime.now()
     operation_status = check_operations_status(date, project_root)
     daily_health = check_daily_artifacts(date, project_root)
-    weekly_health = check_weekly_artifacts(date, project_root)
     latest_action_path = _latest_dated_file(project_root, "data/processed/pdca", "weekly_action_items_*.csv")
     action_note = _weekly_action_note(latest_action_path) if latest_action_path is not None else "週次Act追跡なし"
+    weekly_status = operation_status[operation_status["確認項目"].eq("週次ヘルス")]
+    weekly_ok = not weekly_status.empty and weekly_status["状態"].eq("OK").all()
 
     gates = [
         {
@@ -138,8 +139,8 @@ def check_go_live_readiness(
         },
         {
             "判定項目": "週次ヘルス",
-            "状態": "OK" if not weekly_health.empty and weekly_health["状態"].eq("OK").all() else "Block",
-            "理由": "直近週次PDCAと履歴再生成果物が揃っているか",
+            "状態": "OK" if weekly_ok else "Block",
+            "理由": "直近8日以内の週次ヘルスがOKか",
         },
         {
             "判定項目": "週次Act",

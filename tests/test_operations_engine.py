@@ -91,3 +91,42 @@ def test_check_go_live_readiness_blocks_when_artifacts_are_missing(tmp_path) -> 
     blockers = readiness[readiness["状態"].eq("Block")]
     assert {"運用成果物", "日次ヘルス", "週次ヘルス"}.issubset(set(blockers["判定項目"]))
     assert "売買実行" in set(readiness[readiness["状態"].eq("Review")]["判定項目"])
+
+
+def test_check_go_live_readiness_accepts_recent_weekly_health(tmp_path) -> None:
+    daily_dir = tmp_path / "reports" / "daily"
+    weekly_dir = tmp_path / "reports" / "weekly"
+    notification_dir = tmp_path / "data" / "processed" / "notifications"
+    decisions_dir = tmp_path / "data" / "processed" / "decisions"
+    signals_dir = tmp_path / "data" / "processed" / "signals"
+    pdca_dir = tmp_path / "data" / "processed" / "pdca"
+    for directory in [daily_dir, weekly_dir, notification_dir, decisions_dir, signals_dir, pdca_dir]:
+        directory.mkdir(parents=True)
+
+    for name in [
+        "daily_report",
+        "notification_candidates",
+        "notification_summary",
+        "notification_delivery_plan",
+        "portfolio_check",
+        "manual_decision_sheet",
+    ]:
+        (daily_dir / f"{name}_2099-01-02.md").write_text("ok", encoding="utf-8")
+    (decisions_dir / "manual_decision_sheet_2099-01-02.csv").write_text("ok", encoding="utf-8")
+    (notification_dir / "notification_outbox_2099-01-02.jsonl").write_text("ok", encoding="utf-8")
+    for name in [
+        "notification_packets_manual_immediate",
+        "notification_packets_daily_digest",
+        "notification_packets_archive_only",
+    ]:
+        (notification_dir / f"{name}_2099-01-02.jsonl").write_text("", encoding="utf-8")
+    (signals_dir / "signals_2099-01-02.csv").write_text("ok", encoding="utf-8")
+    (daily_dir / "daily_health_2099-01-02.md").write_text("ok", encoding="utf-8")
+    (weekly_dir / "weekly_health_2099-01-01.md").write_text("ok", encoding="utf-8")
+    (weekly_dir / "weekly_report_2099-01-01.md").write_text("ok", encoding="utf-8")
+    (weekly_dir / "replay_pdca_report_2099-01-01.md").write_text("ok", encoding="utf-8")
+    (pdca_dir / "weekly_action_items_2099-01-01.csv").write_text("status,action_item\nopen,確認\n", encoding="utf-8")
+
+    readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
+    weekly_gate = readiness[readiness["判定項目"].eq("週次ヘルス")].iloc[0]
+    assert weekly_gate["状態"] == "OK"
