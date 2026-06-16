@@ -26,6 +26,7 @@ def test_check_weekly_artifacts_returns_expected_rows() -> None:
     result = check_weekly_artifacts(datetime(2099, 1, 1))
     assert set(result["成果物"]) == {
         "週次PDCAレポート",
+        "週次Act追跡",
         "週次フォワードリターン",
         "週次仮想売買",
         "週次見送り評価",

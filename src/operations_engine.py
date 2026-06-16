@@ -25,6 +25,7 @@ DAILY_HEALTH_ARTIFACTS = [
 
 WEEKLY_HEALTH_ARTIFACTS = [
     ("週次PDCAレポート", "reports/weekly/weekly_report_{date}.md"),
+    ("週次Act追跡", "data/processed/pdca/weekly_action_items_{date}.csv"),
     ("週次フォワードリターン", "data/processed/signals/signal_forward_returns_{date}.csv"),
     ("週次仮想売買", "data/processed/signals/virtual_trades_{date}.csv"),
     ("週次見送り評価", "data/processed/signals/avoid_outcomes_{date}.csv"),
@@ -43,6 +44,7 @@ OPERATIONS_STATUS_ARTIFACTS = [
     ("日次通知パケット", "data/processed/notifications", "notification_packets_daily_digest_*.jsonl", 1, True),
     ("週次ヘルス", "reports/weekly", "weekly_health_*.md", 8, False),
     ("週次PDCAレポート", "reports/weekly", "weekly_report_*.md", 8, False),
+    ("週次Act追跡", "data/processed/pdca", "weekly_action_items_*.csv", 8, False),
     ("軽量履歴再生レポート", "reports/weekly", "replay_pdca_report_*.md", 8, False),
 ]
 
