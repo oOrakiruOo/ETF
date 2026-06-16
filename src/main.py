@@ -66,6 +66,7 @@ from .report_engine import (
     write_backtest_report,
     write_daily_report,
     write_go_live_readiness_report,
+    write_manual_decision_sheet,
     write_daily_health_report,
     write_notification_delivery_plan_report,
     write_notification_report,
@@ -921,6 +922,18 @@ def run_go_live_check() -> None:
     print(f"本運用GO/HOLD判定レポートを作成しました: {output_path}")
 
 
+def run_decision_sheet() -> None:
+    setup_logging()
+    outbox_files = sorted((PROJECT_ROOT / "data" / "processed" / "notifications").glob("notification_outbox_*.jsonl"))
+    if not outbox_files:
+        raise FileNotFoundError("通知アウトボックスがありません。先に daily を実行してください。")
+    payloads = load_notification_outbox(outbox_files[-1])
+    delivery_plan = notification_delivery_plan(payloads)
+    output_path = write_manual_decision_sheet(delivery_plan)
+    logging.getLogger(__name__).info("Manual decision sheet written: %s", output_path)
+    print(f"手動判断シートを作成しました: {output_path}")
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1301,6 +1314,7 @@ def main() -> None:
             "weekly-health",
             "operations-status",
             "go-live-check",
+            "decision-sheet",
             "replay",
             "replay-quick",
         ],
@@ -1333,6 +1347,8 @@ def main() -> None:
         run_operations_status()
     elif args.command == "go-live-check":
         run_go_live_check()
+    elif args.command == "decision-sheet":
+        run_decision_sheet()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

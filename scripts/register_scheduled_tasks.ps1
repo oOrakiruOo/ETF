@@ -8,6 +8,7 @@ param(
     [string]$DailyHealthTime = "07:40",
     [string]$OperationsStatusTime = "07:45",
     [string]$GoLiveCheckTime = "07:50",
+    [string]$DecisionSheetTime = "07:39",
     [string]$WeeklyDay = "SAT",
     [string]$WeeklyTime = "08:00",
     [string]$ReplayQuickDay = "SUN",
@@ -62,6 +63,13 @@ $Tasks = @(
         Command = "notification-packets"
         Schedule = "DAILY"
         Time = $NotificationPacketsTime
+        Day = $null
+    },
+    @{
+        Name = "$TaskPrefix Decision Sheet"
+        Command = "decision-sheet"
+        Schedule = "DAILY"
+        Time = $DecisionSheetTime
         Day = $null
     },
     @{

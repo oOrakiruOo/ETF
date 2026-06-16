@@ -250,6 +250,36 @@ def write_portfolio_check_report(
     return output_path
 
 
+def write_manual_decision_sheet(
+    delivery_plan: pd.DataFrame,
+    output_dir: str | Path = "reports/daily",
+    processed_output_dir: str | Path = "data/processed/decisions",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    processed_dir = ensure_dir(processed_output_dir)
+    output_path = PROJECT_ROOT / directory / f"manual_decision_sheet_{date:%Y-%m-%d}.md"
+    csv_path = processed_dir / f"manual_decision_sheet_{date:%Y-%m-%d}.csv"
+    base_columns = ["優先度", "ETF", "配送先", "確認タイミング", "カテゴリ", "シグナル", "推奨行動"]
+    existing_columns = [column for column in base_columns if column in delivery_plan.columns]
+    decision_sheet = delivery_plan.loc[:, existing_columns].copy() if not delivery_plan.empty else pd.DataFrame()
+    for column in ["判断", "数量", "指値", "実行価格", "実行時刻", "メモ"]:
+        decision_sheet[column] = ""
+    decision_sheet.to_csv(csv_path, index=False)
+    content = [
+        f"# manual_decision_sheet {date:%Y-%m-%d}",
+        "",
+        "実売買は自動実行しません。このシートにMASATOの最終判断と実行結果を記録します。",
+        "",
+        decision_sheet.to_markdown(index=False) if not decision_sheet.empty else "判断対象なし",
+        "",
+        f"判断CSV: `{csv_path}`",
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def write_daily_health_report(
     health: pd.DataFrame,
     output_dir: str | Path = "reports/daily",

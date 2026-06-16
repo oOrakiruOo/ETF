@@ -111,6 +111,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-summary
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-plan
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-packets
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command decision-sheet
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command operations-status
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command go-live-check
 ```
@@ -123,7 +124,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command weekly-health
 ```
 
-タスクスケジューラへ保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・日次ヘルスチェック・運用ステータス・本運用GO/HOLD判定・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
+タスクスケジューラへ保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・手動判断シート・日次ヘルスチェック・運用ステータス・本運用GO/HOLD判定・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -DryRun
@@ -142,6 +143,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
 - `reports/daily/notification_candidates_YYYY-MM-DD.md`
+- `reports/daily/manual_decision_sheet_YYYY-MM-DD.md`
+- `data/processed/decisions/manual_decision_sheet_YYYY-MM-DD.csv`
 - `data/processed/notifications/notification_outbox_YYYY-MM-DD.jsonl`
 - `data/processed/signals/signals_YYYY-MM-DD.csv`
 
@@ -165,6 +168,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 ```powershell
 python -m src.main notification-packets
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-packets
+```
+
+通知計画から手動判断シートを作る場合は、以下を使います。`判断`、`数量`、`指値`、`実行価格`、`実行時刻`、`メモ` を記録し、後続PDCAの実績ログとして使います。
+
+```powershell
+python -m src.main decision-sheet
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command decision-sheet
 ```
 
 日次成果物が揃ったかだけを確認する場合は、以下を使います。

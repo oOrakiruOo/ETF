@@ -21,6 +21,8 @@ def test_check_daily_artifacts_returns_expected_rows() -> None:
         "通知要約",
         "通知配送計画",
         "保有CSVチェック",
+        "手動判断シート",
+        "手動判断CSV",
         "通知アウトボックス",
         "即時通知パケット",
         "日次通知パケット",

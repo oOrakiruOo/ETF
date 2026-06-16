@@ -7,6 +7,7 @@ import pandas as pd
 from src.report_engine import (
     write_daily_health_report,
     write_go_live_readiness_report,
+    write_manual_decision_sheet,
     write_notification_delivery_plan_report,
     write_notification_summary_report,
     write_portfolio_check_report,
@@ -221,6 +222,36 @@ def test_write_notification_delivery_plan_report_lists_routes(tmp_path) -> None:
     text = output_path.read_text(encoding="utf-8")
     assert "manual_immediate" in text
     assert "SMH" in text
+
+
+def test_write_manual_decision_sheet_creates_csv(tmp_path) -> None:
+    delivery_plan = pd.DataFrame(
+        [
+            {
+                "優先度": "High",
+                "ETF": "SMH",
+                "配送先": "manual_immediate",
+                "確認タイミング": "当日すぐ確認",
+                "カテゴリ": "買い価格接近",
+                "シグナル": "買い候補",
+                "推奨行動": "第1買い条件を確認",
+            }
+        ]
+    )
+    processed_dir = tmp_path / "processed"
+    output_path = write_manual_decision_sheet(
+        delivery_plan,
+        output_dir=tmp_path,
+        processed_output_dir=processed_dir,
+        report_date=datetime(2026, 6, 8),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    csv_path = processed_dir / "manual_decision_sheet_2026-06-08.csv"
+    sheet = pd.read_csv(csv_path)
+    assert "判断CSV" in text
+    assert sheet.iloc[0]["ETF"] == "SMH"
+    assert "判断" in sheet.columns
+    assert "実行価格" in sheet.columns
 
 
 def test_write_daily_health_report_marks_missing_artifacts(tmp_path) -> None:
