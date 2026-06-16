@@ -37,11 +37,19 @@ ETF_MAX_WEIGHT_PCT = 10.0
 THEME_MAX_WEIGHT_PCT = 15.0
 
 
+def normalize_portfolio_columns(portfolio: pd.DataFrame) -> pd.DataFrame:
+    normalized = portfolio.copy()
+    for column in PORTFOLIO_COLUMNS:
+        if column not in normalized.columns:
+            normalized[column] = pd.NA
+    return normalized.loc[:, PORTFOLIO_COLUMNS]
+
+
 def load_portfolio(path: str | Path = "data/portfolio/portfolio.csv") -> pd.DataFrame:
     file_path = PROJECT_ROOT / path if not Path(path).is_absolute() else Path(path)
     if not file_path.exists():
         return pd.DataFrame(columns=PORTFOLIO_COLUMNS)
-    return pd.read_csv(file_path)
+    return normalize_portfolio_columns(pd.read_csv(file_path))
 
 
 def validate_portfolio(portfolio: pd.DataFrame) -> pd.DataFrame:
@@ -162,10 +170,14 @@ def validate_portfolio(portfolio: pd.DataFrame) -> pd.DataFrame:
 
 
 def update_portfolio_prices(portfolio: pd.DataFrame, prices: dict[str, float]) -> pd.DataFrame:
-    updated = portfolio.copy()
+    updated = normalize_portfolio_columns(portfolio)
     if updated.empty:
         return updated
-    updated["current_price"] = updated["ticker"].map(prices).fillna(updated["current_price"])
+    updated["ticker"] = updated["ticker"].fillna("").astype(str).str.strip().str.upper()
+    for column in ["quantity", "avg_price", "current_price", "stop_price", "target_price"]:
+        updated[column] = pd.to_numeric(updated[column], errors="coerce")
+    mapped_prices = updated["ticker"].map(prices)
+    updated["current_price"] = mapped_prices.fillna(updated["current_price"])
     updated["market_value"] = updated["quantity"] * updated["current_price"]
     total_value = updated["market_value"].sum()
     updated["weight_pct"] = updated["market_value"] / total_value * 100 if total_value else 0

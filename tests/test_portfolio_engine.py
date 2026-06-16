@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.portfolio_engine import evaluate_portfolio_actions, update_portfolio_prices, validate_portfolio
+from src.portfolio_engine import (
+    PORTFOLIO_COLUMNS,
+    evaluate_portfolio_actions,
+    normalize_portfolio_columns,
+    update_portfolio_prices,
+    validate_portfolio,
+)
 
 
 def test_update_portfolio_prices_calculates_weights_and_pnl() -> None:
@@ -28,6 +34,21 @@ def test_update_portfolio_prices_calculates_weights_and_pnl() -> None:
     assert round(float(updated["market_value"].sum()), 2) == 420.0
     assert round(float(updated.loc[updated["ticker"] == "SMH", "unrealized_pnl_pct"].iloc[0]), 2) == 20.0
     assert round(float(updated["weight_pct"].sum()), 2) == 100.0
+
+
+def test_update_portfolio_prices_accepts_minimal_columns() -> None:
+    portfolio = pd.DataFrame([{"ticker": "qqq", "quantity": 2, "avg_price": 100.0}])
+    updated = update_portfolio_prices(portfolio, {"QQQ": 125.0})
+    assert list(updated.columns) == PORTFOLIO_COLUMNS
+    assert float(updated.iloc[0]["current_price"]) == 125.0
+    assert float(updated.iloc[0]["market_value"]) == 250.0
+
+
+def test_normalize_portfolio_columns_adds_missing_optional_columns() -> None:
+    portfolio = pd.DataFrame([{"ticker": "QQQ", "quantity": 1, "avg_price": 100.0}])
+    normalized = normalize_portfolio_columns(portfolio)
+    assert list(normalized.columns) == PORTFOLIO_COLUMNS
+    assert normalized.iloc[0]["ticker"] == "QQQ"
 
 
 def test_evaluate_portfolio_actions_flags_stop_and_profit() -> None:
