@@ -90,6 +90,17 @@ def _date_from_stem(path: Path) -> datetime | None:
         return None
 
 
+def _weekly_action_note(path: Path) -> str:
+    try:
+        actions = pd.read_csv(path)
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
+        return "Act追跡CSVを読めません"
+    if actions.empty or "status" not in actions.columns:
+        return "未完了Act 0件"
+    open_count = int((~actions["status"].astype(str).str.lower().isin(["done", "closed"])).sum())
+    return f"未完了Act {open_count}件"
+
+
 def check_operations_status(
     report_date: datetime | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -109,6 +120,7 @@ def check_operations_status(
                     "経過日数": "",
                     "サイズ": 0,
                     "パス": str(directory / pattern),
+                    "補足": "",
                 }
             )
             continue
@@ -117,6 +129,7 @@ def check_operations_status(
         size = latest_path.stat().st_size
         fresh = age_days <= int(max_age_days)
         has_content = size > 0 or bool(allow_empty)
+        note = _weekly_action_note(latest_path) if name == "週次Act追跡" and latest_path.exists() else ""
         rows.append(
             {
                 "確認項目": name,
@@ -125,6 +138,7 @@ def check_operations_status(
                 "経過日数": age_days,
                 "サイズ": size,
                 "パス": str(latest_path),
+                "補足": note,
             }
         )
     return pd.DataFrame(rows)

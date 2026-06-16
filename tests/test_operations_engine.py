@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pandas as pd
+
 from src.operations_engine import check_artifacts, check_daily_artifacts, check_operations_status, check_weekly_artifacts
 
 
@@ -56,3 +58,21 @@ def test_check_operations_status_marks_stale_latest_artifacts(tmp_path) -> None:
     daily_health = status[status["確認項目"].eq("日次ヘルス")].iloc[0]
     assert daily_health["状態"] == "Stale"
     assert daily_health["経過日数"] == 2
+
+
+def test_check_operations_status_shows_open_weekly_action_count(tmp_path) -> None:
+    pdca_dir = tmp_path / "data" / "processed" / "pdca"
+    pdca_dir.mkdir(parents=True)
+    actions = pd.DataFrame(
+        [
+            {"status": "open", "action_item": "確認する"},
+            {"status": "done", "action_item": "完了"},
+            {"status": "closed", "action_item": "終了"},
+        ]
+    )
+    actions.to_csv(pdca_dir / "weekly_action_items_2099-01-01.csv", index=False)
+
+    status = check_operations_status(datetime(2099, 1, 2), project_root=tmp_path)
+    weekly_actions = status[status["確認項目"].eq("週次Act追跡")].iloc[0]
+    assert weekly_actions["状態"] == "OK"
+    assert weekly_actions["補足"] == "未完了Act 1件"
