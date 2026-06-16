@@ -390,7 +390,23 @@ def write_weekly_pdca_report(
         action_items.append("バックテストサマリー未作成。`python -m src.main backtest` を実行")
     if signal_improvement_proposals:
         action_items.extend(signal_improvement_proposals)
-    action_path = PROJECT_ROOT / ensure_dir(processed_output_dir) / f"weekly_action_items_{date:%Y-%m-%d}.csv"
+    processed_directory = ensure_dir(processed_output_dir)
+    action_path = processed_directory / f"weekly_action_items_{date:%Y-%m-%d}.csv"
+    previous_action_files = [
+        path
+        for path in sorted(processed_directory.glob("weekly_action_items_*.csv"))
+        if path.name != action_path.name
+    ]
+    previous_action_text = "前回Act項目なし"
+    if previous_action_files:
+        previous_actions = pd.read_csv(previous_action_files[-1])
+        if "status" in previous_actions.columns:
+            open_actions = previous_actions[
+                ~previous_actions["status"].astype(str).str.lower().isin(["done", "closed"])
+            ]
+        else:
+            open_actions = previous_actions
+        previous_action_text = open_actions.to_markdown(index=False) if not open_actions.empty else "未完了Act項目なし"
     action_table = pd.DataFrame(
         [
             {
@@ -450,6 +466,9 @@ def write_weekly_pdca_report(
         *[f"- {item}" for item in action_items],
         "",
         f"Act項目CSV: `{action_path}`",
+        "",
+        "## 前回Act確認",
+        previous_action_text,
     ]
     output_path.write_text("\n".join(content), encoding="utf-8")
     return output_path

@@ -120,6 +120,46 @@ def test_weekly_report_writes_action_item_tracker(tmp_path) -> None:
     assert "フォワード評価を翌週も確認" in tracker["action_item"].tolist()
 
 
+def test_weekly_report_shows_previous_open_action_items(tmp_path) -> None:
+    report_dir = tmp_path / "reports"
+    processed_dir = tmp_path / "processed"
+    processed_dir.mkdir()
+    previous = pd.DataFrame(
+        [
+            {
+                "report_date": "2026-06-08",
+                "item_id": 1,
+                "status": "open",
+                "source": "weekly_pdca",
+                "action_item": "半導体の取り逃がしを確認",
+            },
+            {
+                "report_date": "2026-06-08",
+                "item_id": 2,
+                "status": "done",
+                "source": "weekly_pdca",
+                "action_item": "完了済み項目",
+            },
+        ]
+    )
+    previous.to_csv(processed_dir / "weekly_action_items_2026-06-08.csv", index=False)
+
+    output_path = write_weekly_pdca_report(
+        pd.DataFrame(),
+        pd.DataFrame(),
+        pd.DataFrame(),
+        signal_improvement_proposals=["次週も確認"],
+        output_dir=report_dir,
+        processed_output_dir=processed_dir,
+        report_date=datetime(2026, 6, 15),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "## 前回Act確認" in text
+    assert "半導体の取り逃がしを確認" in text
+    assert "完了済み項目" not in text
+
+
 def test_write_portfolio_check_report_marks_errors(tmp_path) -> None:
     issues = pd.DataFrame(
         [
