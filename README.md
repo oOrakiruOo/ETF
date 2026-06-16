@@ -91,6 +91,7 @@ python -m src.main audit
 
 保有ETFは `data/portfolio/portfolio.csv` に入力します。
 日次レポート実行時に現在価格、時価、比率、含み損益を更新して表示します。
+入力形式は `docs/portfolio_input_guide.md` を参照してください。
 日次実行前に入力漏れや数値ミスだけを確認する場合は、以下を使います。
 
 ```powershell
