@@ -274,6 +274,8 @@ def write_manual_decision_sheet(
         "",
         "判断は `buy` / `sell` / `hold` / `watch`、約定状態は `filled` / `partial` / `not_filled` を基本値として使います。",
         "",
+        "入力欄: `判断`, `数量`, `指値`, `実行価格`, `実行時刻`, `約定状態`, `メモ`。判断しない行は週次PDCAとGO/HOLDで要確認になります。",
+        "",
         decision_sheet.to_markdown(index=False) if not decision_sheet.empty else "判断対象なし",
         "",
         f"判断CSV: `{csv_path}`",

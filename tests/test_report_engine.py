@@ -283,6 +283,8 @@ def test_write_manual_decision_sheet_creates_csv(tmp_path) -> None:
     csv_path = processed_dir / "manual_decision_sheet_2026-06-08.csv"
     sheet = pd.read_csv(csv_path)
     assert "判断CSV" in text
+    assert "入力欄" in text
+    assert "GO/HOLD" in text
     assert sheet.iloc[0]["ETF"] == "SMH"
     assert "判断日" in sheet.columns
     assert "判断者" in sheet.columns
