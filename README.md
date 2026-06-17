@@ -102,10 +102,17 @@ python -m src.main portfolio-check
 python -m src.main daily
 ```
 
+本運用前の日次一式をまとめて作る場合は、以下を使います。実売買は自動実行せず、最後にGO/HOLD判定まで出します。
+
+```powershell
+python -m src.main daily-ops
+```
+
 Windowsタスクスケジューラから実行する場合は、PowerShellラッパーを使います。
 このラッパーはプロジェクト内の仮想環境Pythonを使い、Temp権限問題を避けるため `tmp/` を一時フォルダに設定します。
 
 ```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command daily-ops
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command daily
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command portfolio-check
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-summary
@@ -139,13 +146,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force
 ```
 
-日次実行では、以下も同時に作成します。
+`daily-ops` では、以下も同時に作成します。手動判断CSVに未判断が残る場合、GO/HOLD判定は `HOLD` になります。
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
 - `reports/daily/notification_candidates_YYYY-MM-DD.md`
+- `reports/daily/notification_summary_YYYY-MM-DD.md`
+- `reports/daily/notification_delivery_plan_YYYY-MM-DD.md`
 - `reports/daily/manual_decision_sheet_YYYY-MM-DD.md`
+- `reports/daily/daily_health_YYYY-MM-DD.md`
+- `reports/daily/operations_status_YYYY-MM-DD.md`
+- `reports/daily/go_live_readiness_YYYY-MM-DD.md`
 - `data/processed/decisions/manual_decision_sheet_YYYY-MM-DD.csv`
 - `data/processed/notifications/notification_outbox_YYYY-MM-DD.jsonl`
+- `data/processed/notifications/notification_packets_manual_immediate_YYYY-MM-DD.jsonl`
+- `data/processed/notifications/notification_packets_daily_digest_YYYY-MM-DD.jsonl`
+- `data/processed/notifications/notification_packets_archive_only_YYYY-MM-DD.jsonl`
 - `data/processed/signals/signals_YYYY-MM-DD.csv`
 
 通知アウトボックスは外部送信用のJSONLです。現時点では自動送信せず、LINE/Slack/メールなどへ渡す前の安全な中間ファイルとして使います。
