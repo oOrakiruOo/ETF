@@ -250,8 +250,11 @@ def test_write_manual_decision_sheet_creates_csv(tmp_path) -> None:
     sheet = pd.read_csv(csv_path)
     assert "判断CSV" in text
     assert sheet.iloc[0]["ETF"] == "SMH"
+    assert "判断日" in sheet.columns
+    assert "判断者" in sheet.columns
     assert "判断" in sheet.columns
     assert "実行価格" in sheet.columns
+    assert "約定状態" in sheet.columns
 
 
 def test_write_daily_health_report_marks_missing_artifacts(tmp_path) -> None:

@@ -9,6 +9,8 @@
 5. `data/processed/decisions/manual_decision_sheet_YYYY-MM-DD.csv` に判断・数量・価格・メモを記録
 6. 実売買は自動実行しない。MASATOが最終判断する
 
+判断CSVでは、`判断` は `buy` / `sell` / `hold` / `watch`、`約定状態` は `filled` / `partial` / `not_filled` を基本値として使います。
+
 ## 週次
 
 1. `reports/weekly/weekly_health_YYYY-MM-DD.md` の判定が `OK`
