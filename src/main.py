@@ -951,6 +951,7 @@ def run_decision_sheet() -> None:
 
 
 def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
+    run_portfolio_check()
     run_daily(refresh=refresh, profile_name=profile_name)
     run_notification_summary()
     run_notification_plan()

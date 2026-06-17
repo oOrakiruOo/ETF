@@ -55,6 +55,7 @@ def test_trade_plan_multipliers_from_settings_uses_defaults() -> None:
 def test_run_daily_operations_calls_operational_steps(monkeypatch) -> None:
     calls: list[str] = []
 
+    monkeypatch.setattr("src.main.run_portfolio_check", lambda: calls.append("portfolio-check"))
     monkeypatch.setattr("src.main.run_daily", lambda refresh, profile_name: calls.append(f"daily:{refresh}:{profile_name}"))
     monkeypatch.setattr("src.main.run_notification_summary", lambda: calls.append("notification-summary"))
     monkeypatch.setattr("src.main.run_notification_plan", lambda: calls.append("notification-plan"))
@@ -67,6 +68,7 @@ def test_run_daily_operations_calls_operational_steps(monkeypatch) -> None:
     run_daily_operations(refresh=True, profile_name="test_profile")
 
     assert calls == [
+        "portfolio-check",
         "daily:True:test_profile",
         "notification-summary",
         "notification-plan",
