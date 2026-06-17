@@ -131,7 +131,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command weekly-health
 ```
 
-タスクスケジューラへ保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・手動判断シート・日次ヘルスチェック・運用ステータス・本運用GO/HOLD判定・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
+タスクスケジューラへ日次一括運用（daily-ops）・保有CSVチェック・日次・通知要約・通知配送計画・通知送信パケット・手動判断シート・日次ヘルスチェック・運用ステータス・本運用GO/HOLD判定・週次・軽量履歴再生・週次ヘルスチェックをまとめて登録する場合は、まずドライランで内容を確認します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -DryRun

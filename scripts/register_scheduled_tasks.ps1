@@ -1,6 +1,7 @@
 param(
     [string]$TaskPrefix = "MASATO ETF Rotation",
     [string]$PortfolioCheckTime = "07:20",
+    [string]$DailyOpsTime = "07:25",
     [string]$DailyTime = "07:30",
     [string]$NotificationSummaryTime = "07:35",
     [string]$NotificationPlanTime = "07:37",
@@ -30,6 +31,13 @@ if (-not (Test-Path -LiteralPath $Runner)) {
 }
 
 $Tasks = @(
+    @{
+        Name = "$TaskPrefix Daily Ops"
+        Command = "daily-ops"
+        Schedule = "DAILY"
+        Time = $DailyOpsTime
+        Day = $null
+    },
     @{
         Name = "$TaskPrefix Portfolio Check"
         Command = "portfolio-check"
