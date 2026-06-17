@@ -293,6 +293,57 @@ def test_write_manual_decision_sheet_creates_csv(tmp_path) -> None:
     assert "約定状態" in sheet.columns
 
 
+def test_write_manual_decision_sheet_preserves_existing_inputs(tmp_path) -> None:
+    delivery_plan = pd.DataFrame(
+        [
+            {
+                "優先度": "High",
+                "ETF": "SMH",
+                "配送先": "manual_immediate",
+                "確認タイミング": "当日すぐ確認",
+                "カテゴリ": "買い価格接近",
+                "シグナル": "買い候補",
+                "推奨行動": "第1買い条件を確認",
+            },
+            {
+                "優先度": "Medium",
+                "ETF": "QQQ",
+                "配送先": "daily_digest",
+                "確認タイミング": "日次確認",
+                "カテゴリ": "監視強化",
+                "シグナル": "見送り",
+                "推奨行動": "監視",
+            },
+        ]
+    )
+    processed_dir = tmp_path / "processed"
+    write_manual_decision_sheet(
+        delivery_plan.iloc[[0]],
+        output_dir=tmp_path,
+        processed_output_dir=processed_dir,
+        report_date=datetime(2026, 6, 8),
+    )
+    csv_path = processed_dir / "manual_decision_sheet_2026-06-08.csv"
+    existing = pd.read_csv(csv_path, dtype=str).fillna("")
+    existing.loc[0, "判断"] = "watch"
+    existing.loc[0, "メモ"] = "入力済み"
+    existing.to_csv(csv_path, index=False)
+
+    write_manual_decision_sheet(
+        delivery_plan,
+        output_dir=tmp_path,
+        processed_output_dir=processed_dir,
+        report_date=datetime(2026, 6, 8),
+    )
+
+    sheet = pd.read_csv(csv_path).fillna("")
+    smh = sheet[sheet["ETF"].eq("SMH")].iloc[0]
+    qqq = sheet[sheet["ETF"].eq("QQQ")].iloc[0]
+    assert smh["判断"] == "watch"
+    assert smh["メモ"] == "入力済み"
+    assert qqq["判断"] == ""
+
+
 def test_write_daily_health_report_marks_missing_artifacts(tmp_path) -> None:
     health = pd.DataFrame(
         [

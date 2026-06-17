@@ -262,10 +262,27 @@ def write_manual_decision_sheet(
     output_path = PROJECT_ROOT / directory / f"manual_decision_sheet_{date:%Y-%m-%d}.md"
     csv_path = processed_dir / f"manual_decision_sheet_{date:%Y-%m-%d}.csv"
     base_columns = ["優先度", "ETF", "配送先", "確認タイミング", "カテゴリ", "シグナル", "推奨行動"]
+    input_columns = ["判断日", "判断者", "判断", "数量", "指値", "実行価格", "実行時刻", "約定状態", "メモ"]
     existing_columns = [column for column in base_columns if column in delivery_plan.columns]
     decision_sheet = delivery_plan.loc[:, existing_columns].copy() if not delivery_plan.empty else pd.DataFrame()
-    for column in ["判断日", "判断者", "判断", "数量", "指値", "実行価格", "実行時刻", "約定状態", "メモ"]:
+    for column in input_columns:
         decision_sheet[column] = ""
+    if csv_path.exists() and not decision_sheet.empty:
+        previous = pd.read_csv(csv_path).fillna("")
+        merge_keys = [column for column in ["ETF", "配送先", "カテゴリ", "シグナル", "推奨行動"] if column in decision_sheet.columns and column in previous.columns]
+        if merge_keys:
+            preserved_columns = merge_keys + [column for column in input_columns if column in previous.columns]
+            decision_sheet = decision_sheet.merge(
+                previous.loc[:, preserved_columns],
+                on=merge_keys,
+                how="left",
+                suffixes=("", "_previous"),
+            )
+            for column in input_columns:
+                previous_column = f"{column}_previous"
+                if previous_column in decision_sheet.columns:
+                    decision_sheet[column] = decision_sheet[previous_column].fillna(decision_sheet[column])
+                    decision_sheet = decision_sheet.drop(columns=[previous_column])
     decision_sheet.to_csv(csv_path, index=False)
     content = [
         f"# manual_decision_sheet {date:%Y-%m-%d}",
