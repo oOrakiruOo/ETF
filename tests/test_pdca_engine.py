@@ -118,6 +118,7 @@ def test_summarize_manual_decisions_counts_decisions_and_fills() -> None:
     summary = summarize_manual_decisions(decisions).iloc[0]
     assert summary["対象件数"] == 5
     assert summary["判断済み件数"] == 4
+    assert summary["未判断件数"] == 1
     assert summary["buy件数"] == 1
     assert summary["sell件数"] == 1
     assert summary["hold件数"] == 1
@@ -125,6 +126,9 @@ def test_summarize_manual_decisions_counts_decisions_and_fills() -> None:
     assert summary["約定件数"] == 1
     assert summary["一部約定件数"] == 1
     assert summary["未約定件数"] == 1
+    assert summary["要確認件数"] == 3
+    assert summary["状態"] == "要確認"
+    assert summary["理由"] == "未判断1件、一部約定1件、未約定1件"
 
 
 def test_evaluate_avoid_outcomes_marks_decline_as_correct(monkeypatch) -> None:

@@ -45,6 +45,7 @@ def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
                 {
                     "対象件数": 0,
                     "判断済み件数": 0,
+                    "未判断件数": 0,
                     "buy件数": 0,
                     "sell件数": 0,
                     "hold件数": 0,
@@ -52,6 +53,9 @@ def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
                     "約定件数": 0,
                     "一部約定件数": 0,
                     "未約定件数": 0,
+                    "要確認件数": 0,
+                    "状態": "OK",
+                    "理由": "手動判断対象なし",
                 }
             ]
         )
@@ -69,18 +73,34 @@ def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
         .str.strip()
         .str.lower()
     )
+    decided_count = int(decisions.ne("").sum())
+    undecided_count = int(decisions.eq("").sum())
+    partial_count = int(fills.eq("partial").sum())
+    not_filled_count = int(fills.eq("not_filled").sum())
+    needs_review_count = undecided_count + partial_count + not_filled_count
+    reasons = []
+    if undecided_count:
+        reasons.append(f"未判断{undecided_count}件")
+    if partial_count:
+        reasons.append(f"一部約定{partial_count}件")
+    if not_filled_count:
+        reasons.append(f"未約定{not_filled_count}件")
     return pd.DataFrame(
         [
             {
                 "対象件数": len(manual_decisions),
-                "判断済み件数": int(decisions.ne("").sum()),
+                "判断済み件数": decided_count,
+                "未判断件数": undecided_count,
                 "buy件数": int(decisions.eq("buy").sum()),
                 "sell件数": int(decisions.eq("sell").sum()),
                 "hold件数": int(decisions.eq("hold").sum()),
                 "watch件数": int(decisions.eq("watch").sum()),
                 "約定件数": int(fills.eq("filled").sum()),
-                "一部約定件数": int(fills.eq("partial").sum()),
-                "未約定件数": int(fills.eq("not_filled").sum()),
+                "一部約定件数": partial_count,
+                "未約定件数": not_filled_count,
+                "要確認件数": needs_review_count,
+                "状態": "要確認" if needs_review_count else "OK",
+                "理由": "、".join(reasons) if reasons else "確認漏れなし",
             }
         ]
     )

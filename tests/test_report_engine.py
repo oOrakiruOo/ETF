@@ -132,6 +132,7 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
                 {
                     "対象件数": 2,
                     "判断済み件数": 1,
+                    "未判断件数": 1,
                     "buy件数": 1,
                     "sell件数": 0,
                     "hold件数": 0,
@@ -139,6 +140,9 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
                     "約定件数": 1,
                     "一部約定件数": 0,
                     "未約定件数": 0,
+                    "要確認件数": 1,
+                    "状態": "要確認",
+                    "理由": "未判断1件",
                 }
             ]
         ),
@@ -149,6 +153,7 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
     text = output_path.read_text(encoding="utf-8")
     assert "### 手動判断ログ" in text
     assert "buy件数" in text
+    assert "要確認" in text
 
 
 def test_weekly_report_shows_previous_open_action_items(tmp_path) -> None:
