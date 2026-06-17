@@ -8,6 +8,7 @@ from src.main import (
     avoid_policy_name_from_settings,
     avoid_signals_from_settings,
     build_signal_rows_for_metrics,
+    run_daily_operations,
     run_theme_risk_policy_mode_search,
     summarize_theme_risk_overlay_blocks,
     summarize_theme_risk_overlay_effect,
@@ -49,6 +50,32 @@ def test_build_signal_rows_includes_theme_rotation_risk_columns() -> None:
 def test_trade_plan_multipliers_from_settings_uses_defaults() -> None:
     result = trade_plan_multipliers_from_settings({})
     assert result == {"entry_multiplier": 1.0, "stop_multiplier": 1.0, "target_multiplier": 1.0}
+
+
+def test_run_daily_operations_calls_operational_steps(monkeypatch) -> None:
+    calls: list[str] = []
+
+    monkeypatch.setattr("src.main.run_daily", lambda refresh, profile_name: calls.append(f"daily:{refresh}:{profile_name}"))
+    monkeypatch.setattr("src.main.run_notification_summary", lambda: calls.append("notification-summary"))
+    monkeypatch.setattr("src.main.run_notification_plan", lambda: calls.append("notification-plan"))
+    monkeypatch.setattr("src.main.run_notification_packets", lambda: calls.append("notification-packets"))
+    monkeypatch.setattr("src.main.run_decision_sheet", lambda: calls.append("decision-sheet"))
+    monkeypatch.setattr("src.main.run_daily_health", lambda: calls.append("daily-health"))
+    monkeypatch.setattr("src.main.run_operations_status", lambda: calls.append("operations-status"))
+    monkeypatch.setattr("src.main.run_go_live_check", lambda: calls.append("go-live-check"))
+
+    run_daily_operations(refresh=True, profile_name="test_profile")
+
+    assert calls == [
+        "daily:True:test_profile",
+        "notification-summary",
+        "notification-plan",
+        "notification-packets",
+        "decision-sheet",
+        "daily-health",
+        "operations-status",
+        "go-live-check",
+    ]
 
 
 def test_avoid_policy_from_settings_uses_sell_only_and_safe_default() -> None:

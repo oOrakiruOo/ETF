@@ -950,6 +950,17 @@ def run_decision_sheet() -> None:
     print(f"手動判断シートを作成しました: {output_path}")
 
 
+def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
+    run_daily(refresh=refresh, profile_name=profile_name)
+    run_notification_summary()
+    run_notification_plan()
+    run_notification_packets()
+    run_decision_sheet()
+    run_daily_health()
+    run_operations_status()
+    run_go_live_check()
+
+
 def run_replay(refresh: bool = False) -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -1316,6 +1327,7 @@ def main() -> None:
         nargs="?",
         choices=[
             "daily",
+            "daily-ops",
             "backtest",
             "optimize",
             "refine",
@@ -1341,6 +1353,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "refine":
         run_refine(refresh=args.refresh)
+    elif args.command == "daily-ops":
+        run_daily_operations(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "replay":
         run_replay(refresh=args.refresh)
     elif args.command == "replay-quick":
