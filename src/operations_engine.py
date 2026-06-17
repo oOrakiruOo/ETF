@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .pdca_engine import summarize_manual_decisions
 from .utils import PROJECT_ROOT
 
 
@@ -114,6 +115,21 @@ def _latest_dated_file(project_root: Path, folder: str, pattern: str) -> Path | 
     return max(dated_paths, key=lambda item: item[0])[1]
 
 
+def _manual_decision_gate(project_root: Path, date: datetime) -> dict[str, str]:
+    path = project_root / "data" / "processed" / "decisions" / f"manual_decision_sheet_{date:%Y-%m-%d}.csv"
+    if not path.exists():
+        return {"判定項目": "手動判断ログ", "状態": "Block", "理由": "当日の手動判断CSVなし"}
+    try:
+        decisions = pd.read_csv(path)
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
+        return {"判定項目": "手動判断ログ", "状態": "Block", "理由": "手動判断CSVを読めません"}
+    summary = summarize_manual_decisions(decisions).iloc[0]
+    needs_review = int(summary.get("要確認件数", 0) or 0)
+    if needs_review:
+        return {"判定項目": "手動判断ログ", "状態": "Block", "理由": str(summary.get("理由", "手動判断に要確認あり"))}
+    return {"判定項目": "手動判断ログ", "状態": "OK", "理由": str(summary.get("理由", "確認漏れなし"))}
+
+
 def check_go_live_readiness(
     report_date: datetime | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -147,6 +163,7 @@ def check_go_live_readiness(
             "状態": "Review",
             "理由": action_note,
         },
+        _manual_decision_gate(project_root, date),
         {
             "判定項目": "売買実行",
             "状態": "Review",

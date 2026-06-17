@@ -130,3 +130,19 @@ def test_check_go_live_readiness_accepts_recent_weekly_health(tmp_path) -> None:
     readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
     weekly_gate = readiness[readiness["判定項目"].eq("週次ヘルス")].iloc[0]
     assert weekly_gate["状態"] == "OK"
+
+
+def test_check_go_live_readiness_reviews_unfinished_manual_decisions(tmp_path) -> None:
+    decisions_dir = tmp_path / "data" / "processed" / "decisions"
+    decisions_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {"ETF": "SMH", "判断": "", "約定状態": ""},
+            {"ETF": "QQQ", "判断": "buy", "約定状態": "not_filled"},
+        ]
+    ).to_csv(decisions_dir / "manual_decision_sheet_2099-01-02.csv", index=False)
+
+    readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
+    manual_gate = readiness[readiness["判定項目"].eq("手動判断ログ")].iloc[0]
+    assert manual_gate["状態"] == "Block"
+    assert manual_gate["理由"] == "未判断1件、未約定1件"
