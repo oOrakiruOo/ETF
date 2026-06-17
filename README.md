@@ -103,6 +103,7 @@ python -m src.main daily
 ```
 
 本運用前の日次一式をまとめて作る場合は、以下を使います。実売買は自動実行せず、最後にGO/HOLD判定まで出します。
+毎日の確認手順は `docs/daily_operation_runbook.md` を参照してください。
 
 ```powershell
 python -m src.main daily-ops
