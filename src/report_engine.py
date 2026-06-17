@@ -387,6 +387,7 @@ def write_weekly_pdca_report(
     avoid_outcomes: pd.DataFrame | None = None,
     avoid_summary: pd.DataFrame | None = None,
     avoid_policy_name: str = "current_all_avoid",
+    manual_decision_summary: pd.DataFrame | None = None,
     output_dir: str | Path = "reports/weekly",
     processed_output_dir: str | Path = "data/processed/pdca",
     report_date: datetime | None = None,
@@ -433,6 +434,9 @@ def write_weekly_pdca_report(
         avoid_summary_text = avoid_summary.to_markdown(index=False)
     if avoid_outcomes is not None and not avoid_outcomes.empty:
         avoid_detail_text = avoid_outcomes.tail(20).to_markdown(index=False)
+    manual_decision_text = "手動判断ログなし"
+    if manual_decision_summary is not None and not manual_decision_summary.empty:
+        manual_decision_text = manual_decision_summary.to_markdown(index=False)
     if not best_parameters.empty:
         best = best_parameters.iloc[0]
         action_items.append(
@@ -498,6 +502,9 @@ def write_weekly_pdca_report(
         avoid_summary_text,
         "",
         avoid_detail_text,
+        "",
+        "### 手動判断ログ",
+        manual_decision_text,
         "",
         "## 2. ベンチマーク比較",
         backtest_summary.to_markdown(index=False) if not backtest_summary.empty else "バックテストサマリーなし",

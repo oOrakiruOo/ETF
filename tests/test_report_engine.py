@@ -122,6 +122,35 @@ def test_weekly_report_writes_action_item_tracker(tmp_path) -> None:
     assert "フォワード評価を翌週も確認" in tracker["action_item"].tolist()
 
 
+def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
+    output_path = write_weekly_pdca_report(
+        pd.DataFrame(),
+        pd.DataFrame(),
+        pd.DataFrame(),
+        manual_decision_summary=pd.DataFrame(
+            [
+                {
+                    "対象件数": 2,
+                    "判断済み件数": 1,
+                    "buy件数": 1,
+                    "sell件数": 0,
+                    "hold件数": 0,
+                    "watch件数": 0,
+                    "約定件数": 1,
+                    "一部約定件数": 0,
+                    "未約定件数": 0,
+                }
+            ]
+        ),
+        output_dir=tmp_path,
+        processed_output_dir=tmp_path / "processed",
+        report_date=datetime(2026, 6, 15),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "### 手動判断ログ" in text
+    assert "buy件数" in text
+
+
 def test_weekly_report_shows_previous_open_action_items(tmp_path) -> None:
     report_dir = tmp_path / "reports"
     processed_dir = tmp_path / "processed"

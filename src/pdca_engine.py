@@ -38,6 +38,54 @@ AVOID_POLICY_SIGNALS = {
 }
 
 
+def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
+    if manual_decisions.empty:
+        return pd.DataFrame(
+            [
+                {
+                    "対象件数": 0,
+                    "判断済み件数": 0,
+                    "buy件数": 0,
+                    "sell件数": 0,
+                    "hold件数": 0,
+                    "watch件数": 0,
+                    "約定件数": 0,
+                    "一部約定件数": 0,
+                    "未約定件数": 0,
+                }
+            ]
+        )
+    decisions = (
+        manual_decisions.get("判断", pd.Series("", index=manual_decisions.index))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+    fills = (
+        manual_decisions.get("約定状態", pd.Series("", index=manual_decisions.index))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+    return pd.DataFrame(
+        [
+            {
+                "対象件数": len(manual_decisions),
+                "判断済み件数": int(decisions.ne("").sum()),
+                "buy件数": int(decisions.eq("buy").sum()),
+                "sell件数": int(decisions.eq("sell").sum()),
+                "hold件数": int(decisions.eq("hold").sum()),
+                "watch件数": int(decisions.eq("watch").sum()),
+                "約定件数": int(fills.eq("filled").sum()),
+                "一部約定件数": int(fills.eq("partial").sum()),
+                "未約定件数": int(fills.eq("not_filled").sum()),
+            }
+        ]
+    )
+
+
 def propose_pdca_action(benchmark_outperformed: bool, false_positive_count: int) -> list[str]:
     proposals: list[str] = []
     if not benchmark_outperformed:

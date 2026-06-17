@@ -57,6 +57,7 @@ from .pdca_engine import (
     run_avoid_policy_search,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
+    summarize_manual_decisions,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -806,6 +807,18 @@ def load_recent_signal_history(limit: int = 7) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def load_recent_manual_decisions(limit: int = 7) -> pd.DataFrame:
+    paths = sorted((PROJECT_ROOT / "data" / "processed" / "decisions").glob("manual_decision_sheet_*.csv"))
+    if not paths:
+        return pd.DataFrame()
+    frames = []
+    for path in paths[-limit:]:
+        frame = pd.read_csv(path)
+        frame.insert(0, "snapshot", path.stem.replace("manual_decision_sheet_", ""))
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True)
+
+
 def run_weekly() -> None:
     setup_logging()
     settings = load_yaml("config/settings.yaml")
@@ -822,6 +835,8 @@ def run_weekly() -> None:
     virtual_trade_summary = summarize_virtual_trades(virtual_trades)
     avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
+    manual_decisions = load_recent_manual_decisions()
+    manual_decision_summary = summarize_manual_decisions(manual_decisions)
     output_path = write_weekly_pdca_report(
         backtest_summary,
         parameter_results,
@@ -835,6 +850,7 @@ def run_weekly() -> None:
         avoid_outcomes,
         avoid_summary,
         avoid_policy_name,
+        manual_decision_summary=manual_decision_summary,
     )
     logging.getLogger(__name__).info("Weekly report written: %s", output_path)
     print(f"週次PDCAレポートを作成しました: {output_path}")

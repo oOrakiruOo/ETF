@@ -12,6 +12,7 @@ from src.pdca_engine import (
     run_entry_parameter_search,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
+    summarize_manual_decisions,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -102,6 +103,28 @@ def test_summarize_virtual_trades_counts_filled_and_unfilled() -> None:
     assert summary.iloc[0]["約定件数"] == 2
     assert summary.iloc[0]["未約定件数"] == 1
     assert summary.iloc[0]["勝率"] == 50.0
+
+
+def test_summarize_manual_decisions_counts_decisions_and_fills() -> None:
+    decisions = pd.DataFrame(
+        [
+            {"判断": "buy", "約定状態": "filled"},
+            {"判断": "sell", "約定状態": "partial"},
+            {"判断": "hold", "約定状態": "not_filled"},
+            {"判断": "watch", "約定状態": ""},
+            {"判断": "", "約定状態": ""},
+        ]
+    )
+    summary = summarize_manual_decisions(decisions).iloc[0]
+    assert summary["対象件数"] == 5
+    assert summary["判断済み件数"] == 4
+    assert summary["buy件数"] == 1
+    assert summary["sell件数"] == 1
+    assert summary["hold件数"] == 1
+    assert summary["watch件数"] == 1
+    assert summary["約定件数"] == 1
+    assert summary["一部約定件数"] == 1
+    assert summary["未約定件数"] == 1
 
 
 def test_evaluate_avoid_outcomes_marks_decline_as_correct(monkeypatch) -> None:
