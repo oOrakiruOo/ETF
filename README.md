@@ -110,6 +110,12 @@ python -m src.main daily
 python -m src.main daily-ops
 ```
 
+LINE実送信なしで本運用前の最終リハーサルを行う場合は、以下を使います。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_final_rehearsal.ps1
+```
+
 Windowsタスクスケジューラから実行する場合は、PowerShellラッパーを使います。
 このラッパーはプロジェクト内の仮想環境Pythonを使い、Temp権限問題を避けるため `tmp/` を一時フォルダに設定します。
 

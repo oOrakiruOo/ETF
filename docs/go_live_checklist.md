@@ -14,6 +14,8 @@
 未判断や未約定が残る場合、GO/HOLD判定は `HOLD` になります。
 LINE設定が未完了の場合も、GO/HOLD判定に `LINE設定: Block` が表示されます。
 
+本運用前の最終リハーサルだけ行う場合は、`scripts/run_final_rehearsal.ps1` を実行します。LINEの実送信は行いません。
+
 ## 週次
 
 1. `reports/weekly/weekly_health_YYYY-MM-DD.md` の判定が `OK`
