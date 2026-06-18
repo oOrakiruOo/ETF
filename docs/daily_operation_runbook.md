@@ -8,6 +8,12 @@ python -m src.main daily-ops
 
 作成された日次レポート、通知配送計画、手動判断CSV、GO/HOLD判定を確認します。実売買は自動実行しません。
 
+最新状態だけをまとめて見る場合は、以下を使います。
+
+```powershell
+.\scripts\show_latest_status.ps1
+```
+
 ## 2. 携帯向け要約とLINE確認
 
 `reports/daily/mobile_summary_YYYY-MM-DD.txt` を確認します。
