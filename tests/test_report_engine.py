@@ -5,6 +5,8 @@ from datetime import datetime
 import pandas as pd
 
 from src.report_engine import (
+    build_signal_table,
+    write_daily_report,
     write_daily_health_report,
     write_go_live_readiness_report,
     write_manual_decision_sheet,
@@ -15,6 +17,45 @@ from src.report_engine import (
     write_weekly_health_report,
     write_weekly_pdca_report,
 )
+
+
+def test_write_daily_report_shows_compact_score_ranking(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "SMH",
+                "テーマ": "半導体",
+                "ETFスコア": 80.0,
+                "テーマスコア": 75.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ3: 加速期",
+                "現在価格": 100.0,
+                "第1買い": 95.0,
+                "第1買いまで%": -5.0,
+                "第2買い": 90.0,
+                "第3買い": 85.0,
+                "保守目標": 115.0,
+                "強気目標": 125.0,
+                "停止価格": 80.0,
+                "RR": 1.5,
+                "判定": "買い候補",
+                "テーマリスク理由": "大きな警戒なし",
+                "テーマ予防策": "通常ルールで監視",
+            }
+        ]
+    )
+    output_path = write_daily_report(
+        signal_table,
+        {"半導体": 75.0},
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 18),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "## 4. ETFスコアランキング 要約" in text
+    assert "## 4b. ETFスコアランキング 詳細" in text
+    summary_text = text.split("## 4b. ETFスコアランキング 詳細")[0]
+    assert "テーマリスク理由" not in summary_text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:

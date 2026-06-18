@@ -30,6 +30,19 @@ DISPLAY_COLUMNS = [
     "テーマ予防策",
 ]
 
+SCORE_SUMMARY_COLUMNS = [
+    "ETF",
+    "テーマ",
+    "ETFスコア",
+    "テーマスコア",
+    "判定",
+    "現在価格",
+    "第1買いまで%",
+    "RR",
+    "テーマリスク",
+    "ステージ",
+]
+
 
 def build_signal_table(rows: list[dict[str, object]]) -> pd.DataFrame:
     table = pd.DataFrame(rows)
@@ -82,6 +95,8 @@ def write_daily_report(
         risk_path.parent.mkdir(parents=True, exist_ok=True)
         theme_risk_table.to_csv(risk_path, index=False)
         theme_risk_text = theme_risk_table.head(15).to_markdown(index=False)
+    score_summary_columns = [column for column in SCORE_SUMMARY_COLUMNS if column in signal_table.columns]
+    score_summary = signal_table.loc[:, score_summary_columns].head(12) if score_summary_columns else pd.DataFrame()
     content = [
         f"# daily_report {date:%Y-%m-%d}",
         "",
@@ -94,7 +109,10 @@ def write_daily_report(
         "## 3. テーマスコアランキング",
         theme_ranking.to_markdown(index=False),
         "",
-        "## 4. ETFスコアランキング",
+        "## 4. ETFスコアランキング 要約",
+        score_summary.to_markdown(index=False) if not score_summary.empty else "評価なし",
+        "",
+        "## 4b. ETFスコアランキング 詳細",
         signal_table.to_markdown(index=False),
         "",
         "## 5. 買い候補",
