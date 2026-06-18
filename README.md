@@ -122,6 +122,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\show_latest_status.ps1
 ```
 
+GitHub ActionsでPCを起動せずに日次実行とLINE送信を行う場合は、GitHubリポジトリの `Settings > Secrets and variables > Actions` に以下を登録します。
+
+- `LINE_CHANNEL_ACCESS_TOKEN`
+- `LINE_TO_USER_ID`
+
+その後、`Actions > Daily ETF LINE > Run workflow` で手動実行できます。スケジュールは平日朝 07:25 JST 相当です。
+
 Windowsタスクスケジューラから実行する場合は、PowerShellラッパーを使います。
 このラッパーはプロジェクト内の仮想環境Pythonを使い、Temp権限問題を避けるため `tmp/` を一時フォルダに設定します。
 
