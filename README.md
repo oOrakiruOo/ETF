@@ -179,6 +179,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 ```
 
 LINEへ送信する場合は、LINE DevelopersでMessaging APIチャネルを作り、以下の環境変数を設定してから実行します。秘密値はリポジトリへ保存しません。
+詳しい手順は `docs/line_setup_guide.md` を参照してください。
 
 ```powershell
 $env:LINE_CHANNEL_ACCESS_TOKEN = "..."
