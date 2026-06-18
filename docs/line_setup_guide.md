@@ -22,13 +22,27 @@ LINE Notifyは2025年3月31日に終了済みのため使いません。
 
 ## 3. 一時設定して確認する
 
+スケジュール送信でも使う場合は、Windowsユーザー環境変数へ保存します。
+
+```powershell
+.\scripts\set_line_environment.ps1
+```
+
+トークンは非表示入力です。保存後、新しいPowerShellを開いて確認します。
+
+```powershell
+.\scripts\run_workflow.ps1 -Command line-check
+```
+
+`LINE設定: OK` と出れば送信準備完了です。
+
+その場だけでテストする場合は、以下のように一時設定しても構いません。ただし、この方法だけではスケジュール実行時に値が見えない場合があります。
+
 ```powershell
 $env:LINE_CHANNEL_ACCESS_TOKEN = "取得したチャネルアクセストークン"
 $env:LINE_TO_USER_ID = "送信先ユーザーID"
 .\scripts\run_workflow.ps1 -Command line-check
 ```
-
-`LINE設定: OK` と出れば送信準備完了です。
 
 ## 4. 手動送信する
 
