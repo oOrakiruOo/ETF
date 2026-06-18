@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from datetime import datetime
 
 import pandas as pd
 
@@ -68,6 +69,7 @@ from .report_engine import (
     write_daily_report,
     write_go_live_readiness_report,
     write_manual_decision_sheet,
+    write_mobile_summary,
     write_daily_health_report,
     write_notification_delivery_plan_report,
     write_notification_report,
@@ -950,6 +952,44 @@ def run_decision_sheet() -> None:
     print(f"手動判断シートを作成しました: {output_path}")
 
 
+def _latest_signals_path() -> tuple[datetime, str]:
+    signals_dir = PROJECT_ROOT / "data" / "processed" / "signals"
+    paths = sorted(signals_dir.glob("signals_*.csv"))
+    if not paths:
+        raise FileNotFoundError("シグナルCSVがありません。先に daily または daily-ops を実行してください。")
+    latest = paths[-1]
+    try:
+        report_date = datetime.strptime(latest.stem.replace("signals_", ""), "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError(f"シグナルCSVの日付を読めません: {latest}") from exc
+    return report_date, str(latest)
+
+
+def run_mobile_summary() -> None:
+    setup_logging()
+    report_date, signals_path = _latest_signals_path()
+    signal_table = pd.read_csv(signals_path)
+    readiness = check_go_live_readiness(report_date)
+    decision_path = (
+        PROJECT_ROOT
+        / "data"
+        / "processed"
+        / "decisions"
+        / f"manual_decision_sheet_{report_date:%Y-%m-%d}.csv"
+    )
+    manual_summary = pd.DataFrame()
+    if decision_path.exists():
+        manual_summary = summarize_manual_decisions(pd.read_csv(decision_path))
+    output_path = write_mobile_summary(
+        signal_table,
+        readiness=readiness,
+        manual_decision_summary=manual_summary,
+        report_date=report_date,
+    )
+    logging.getLogger(__name__).info("Mobile summary written: %s", output_path)
+    print(f"携帯向け要約を作成しました: {output_path}")
+
+
 def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
     run_portfolio_check()
     run_daily(refresh=refresh, profile_name=profile_name)
@@ -1344,6 +1384,7 @@ def main() -> None:
             "operations-status",
             "go-live-check",
             "decision-sheet",
+            "mobile-summary",
             "replay",
             "replay-quick",
         ],
@@ -1380,6 +1421,8 @@ def main() -> None:
         run_go_live_check()
     elif args.command == "decision-sheet":
         run_decision_sheet()
+    elif args.command == "mobile-summary":
+        run_mobile_summary()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

@@ -10,6 +10,7 @@ from src.report_engine import (
     write_daily_health_report,
     write_go_live_readiness_report,
     write_manual_decision_sheet,
+    write_mobile_summary,
     write_notification_delivery_plan_report,
     write_notification_summary_report,
     write_portfolio_check_report,
@@ -56,6 +57,55 @@ def test_write_daily_report_shows_compact_score_ranking(tmp_path) -> None:
     assert "## 4b. ETFスコアランキング 詳細" in text
     summary_text = text.split("## 4b. ETFスコアランキング 詳細")[0]
     assert "テーマリスク理由" not in summary_text
+
+
+def test_write_mobile_summary_outputs_phone_friendly_ranking(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "VGT",
+                "テーマ": "AI",
+                "ETFスコア": 84.43,
+                "テーマスコア": 67.39,
+                "テーマリスク": "中",
+                "テーマリスクスコア": 1,
+                "ステージ": "加速期",
+                "現在価格": 116.74,
+                "第1買い": 116.74,
+                "第1買いまで%": 0.0,
+                "第2買い": 110.0,
+                "第3買い": 105.0,
+                "保守目標": 125.0,
+                "強気目標": 130.0,
+                "停止価格": 108.0,
+                "RR": 0.87,
+                "判定": "見送り",
+                "テーマリスク理由": "過熱注意",
+                "テーマ予防策": "監視",
+            }
+        ]
+    )
+    output_path = write_mobile_summary(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "日次ヘルス", "状態": "OK", "理由": "OK"}]),
+        manual_decision_summary=pd.DataFrame(
+            [
+                {
+                    "対象件数": 1,
+                    "判断済み件数": 1,
+                    "未判断件数": 0,
+                    "状態": "OK",
+                }
+            ]
+        ),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 18),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "ETF Rotation 2026-06-18" in text
+    assert "GO/HOLD: GO（手動確認後）" in text
+    assert "手動判断: OK 対象1 判断済1 未判断0" in text
+    assert "1. VGT ETF84.43 テーマ67.39 見送り RR0.87 リスク中" in text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:

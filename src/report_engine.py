@@ -140,6 +140,60 @@ def write_daily_report(
     return output_path
 
 
+def _mobile_value(value: object) -> str:
+    if pd.isna(value):
+        return "-"
+    if isinstance(value, float):
+        return f"{value:.2f}".rstrip("0").rstrip(".")
+    return str(value)
+
+
+def write_mobile_summary(
+    signal_table: pd.DataFrame,
+    readiness: pd.DataFrame | None = None,
+    manual_decision_summary: pd.DataFrame | None = None,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+    max_rows: int = 8,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"mobile_summary_{date:%Y-%m-%d}.txt"
+    go_hold = "GO（手動確認後）"
+    if readiness is not None and not readiness.empty and readiness["状態"].eq("Block").any():
+        go_hold = "HOLD"
+    manual_text = "手動判断: 未評価"
+    if manual_decision_summary is not None and not manual_decision_summary.empty:
+        manual = manual_decision_summary.iloc[0]
+        manual_text = (
+            f"手動判断: {_mobile_value(manual.get('状態'))} "
+            f"対象{_mobile_value(manual.get('対象件数'))} "
+            f"判断済{_mobile_value(manual.get('判断済み件数'))} "
+            f"未判断{_mobile_value(manual.get('未判断件数'))}"
+        )
+    lines = [
+        f"ETF Rotation {date:%Y-%m-%d}",
+        f"GO/HOLD: {go_hold}",
+        manual_text,
+        "",
+        "上位ETF:",
+    ]
+    top = signal_table.head(max_rows) if not signal_table.empty else pd.DataFrame()
+    if top.empty:
+        lines.append("評価なし")
+    for index, row in enumerate(top.to_dict("records"), start=1):
+        lines.append(
+            f"{index}. {_mobile_value(row.get('ETF'))} "
+            f"ETF{_mobile_value(row.get('ETFスコア'))} "
+            f"テーマ{_mobile_value(row.get('テーマスコア'))} "
+            f"{_mobile_value(row.get('判定'))} "
+            f"RR{_mobile_value(row.get('RR'))} "
+            f"リスク{_mobile_value(row.get('テーマリスク'))}"
+        )
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
 def write_signal_snapshot(
     signal_table: pd.DataFrame,
     output_dir: str | Path = "data/processed/signals",
