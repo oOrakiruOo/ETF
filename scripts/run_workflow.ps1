@@ -20,6 +20,14 @@ if (-not (Test-Path -LiteralPath $Tmp)) {
 
 $env:TMP = $Tmp
 $env:TEMP = $Tmp
+$LineToken = [Environment]::GetEnvironmentVariable("LINE_CHANNEL_ACCESS_TOKEN", "User")
+$LineToUserId = [Environment]::GetEnvironmentVariable("LINE_TO_USER_ID", "User")
+if ($LineToken) {
+    $env:LINE_CHANNEL_ACCESS_TOKEN = $LineToken
+}
+if ($LineToUserId) {
+    $env:LINE_TO_USER_ID = $LineToUserId
+}
 
 $Arguments = @("-m", "src.main", $Command)
 if ($Refresh) {
