@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
@@ -31,6 +32,7 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
+from .line_engine import send_line_push_message
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
@@ -965,8 +967,7 @@ def _latest_signals_path() -> tuple[datetime, str]:
     return report_date, str(latest)
 
 
-def run_mobile_summary() -> None:
-    setup_logging()
+def _write_latest_mobile_summary() -> str:
     report_date, signals_path = _latest_signals_path()
     signal_table = pd.read_csv(signals_path)
     readiness = check_go_live_readiness(report_date)
@@ -986,8 +987,23 @@ def run_mobile_summary() -> None:
         manual_decision_summary=manual_summary,
         report_date=report_date,
     )
+    return str(output_path)
+
+
+def run_mobile_summary() -> None:
+    setup_logging()
+    output_path = _write_latest_mobile_summary()
     logging.getLogger(__name__).info("Mobile summary written: %s", output_path)
     print(f"携帯向け要約を作成しました: {output_path}")
+
+
+def run_line_summary() -> None:
+    setup_logging()
+    output_path = _write_latest_mobile_summary()
+    text = Path(output_path).read_text(encoding="utf-8")
+    status = send_line_push_message(text)
+    logging.getLogger(__name__).info("LINE summary sent: %s status=%s", output_path, status)
+    print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
 def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
@@ -1385,6 +1401,7 @@ def main() -> None:
             "go-live-check",
             "decision-sheet",
             "mobile-summary",
+            "line-summary",
             "replay",
             "replay-quick",
         ],
@@ -1423,6 +1440,8 @@ def main() -> None:
         run_decision_sheet()
     elif args.command == "mobile-summary":
         run_mobile_summary()
+    elif args.command == "line-summary":
+        run_line_summary()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

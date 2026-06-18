@@ -6,6 +6,7 @@ param(
     [string]$NotificationSummaryTime = "07:35",
     [string]$NotificationPlanTime = "07:37",
     [string]$NotificationPacketsTime = "07:38",
+    [string]$LineSummaryTime = "07:55",
     [string]$DailyHealthTime = "07:40",
     [string]$OperationsStatusTime = "07:45",
     [string]$GoLiveCheckTime = "07:50",
@@ -17,6 +18,7 @@ param(
     [string]$WeeklyHealthDay = "SUN",
     [string]$WeeklyHealthTime = "08:50",
     [bool]$AllowStartOnBattery = $true,
+    [switch]$IncludeLineSummary,
     [switch]$Force,
     [switch]$DryRun
 )
@@ -123,6 +125,18 @@ $Tasks = @(
         Day = $WeeklyHealthDay
     }
 )
+
+if ($IncludeLineSummary) {
+    $Tasks += @(
+        @{
+            Name = "$TaskPrefix LINE Summary"
+            Command = "line-summary"
+            Schedule = "DAILY"
+            Time = $LineSummaryTime
+            Day = $null
+        }
+    )
+}
 
 foreach ($Task in $Tasks) {
     $TaskRun = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$Runner`" -Command $($Task.Command)"

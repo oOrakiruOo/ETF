@@ -120,6 +120,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-plan
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command notification-packets
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command decision-sheet
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command mobile-summary
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command operations-status
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command go-live-check
 ```
@@ -147,6 +148,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force
 ```
 
+LINE送信タスクも登録する場合は、LINE Messaging APIの送信先を設定した後で `-IncludeLineSummary` を付けます。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force -IncludeLineSummary
+```
+
 `daily-ops` では、以下も同時に作成します。手動判断CSVに未判断が残る場合、GO/HOLD判定は `HOLD` になります。
 
 - `reports/daily/daily_report_YYYY-MM-DD.md`
@@ -163,6 +170,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 - `data/processed/notifications/notification_packets_daily_digest_YYYY-MM-DD.jsonl`
 - `data/processed/notifications/notification_packets_archive_only_YYYY-MM-DD.jsonl`
 - `data/processed/signals/signals_YYYY-MM-DD.csv`
+
+携帯向けの短い要約を作る場合は、以下を使います。外部送信は行いません。
+
+```powershell
+python -m src.main mobile-summary
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command mobile-summary
+```
+
+LINEへ送信する場合は、LINE DevelopersでMessaging APIチャネルを作り、以下の環境変数を設定してから実行します。秘密値はリポジトリへ保存しません。
+
+```powershell
+$env:LINE_CHANNEL_ACCESS_TOKEN = "..."
+$env:LINE_TO_USER_ID = "..."
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command line-summary
+```
 
 通知アウトボックスは外部送信用のJSONLです。現時点では自動送信せず、LINE/Slack/メールなどへ渡す前の安全な中間ファイルとして使います。
 送信前の要約だけを確認する場合は、以下を使います。
