@@ -1009,6 +1009,7 @@ def run_line_summary() -> None:
 def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
     run_portfolio_check()
     run_daily(refresh=refresh, profile_name=profile_name)
+    run_mobile_summary()
     run_notification_summary()
     run_notification_plan()
     run_notification_packets()
