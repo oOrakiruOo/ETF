@@ -3,6 +3,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [Text.UTF8Encoding]::new()
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new()
 
 if (-not $ToUserId) {
     $ToUserId = Read-Host "LINE_TO_USER_ID"
@@ -30,5 +32,5 @@ if (-not $ToUserId) {
 $env:LINE_CHANNEL_ACCESS_TOKEN = $Token
 $env:LINE_TO_USER_ID = $ToUserId
 
-Write-Host "LINE環境変数をWindowsユーザー環境変数へ保存しました。"
-Write-Host "新しいPowerShellを開いて line-check を実行してください。"
+Write-Host "LINE environment variables saved to Windows user environment."
+Write-Host "Open a new PowerShell and run: .\scripts\run_workflow.ps1 -Command line-check"

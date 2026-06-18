@@ -58,6 +58,13 @@ $env:LINE_TO_USER_ID = "送信先ユーザーID"
 
 送信される本文は、直近の `reports/daily/mobile_summary_YYYY-MM-DD.txt` と同じ内容です。
 
+`LINE_TO_USER_ID` が分からない場合で、Botの友だちが自分だけなら、ユーザーIDなしのブロードキャスト送信を使えます。
+
+```powershell
+.\scripts\run_workflow.ps1 -Command line-broadcast-test
+.\scripts\run_workflow.ps1 -Command line-broadcast-summary
+```
+
 ## 5. スケジュール送信を登録する
 
 LINE設定が済んだ後に、以下でLINE Summaryタスクも登録します。

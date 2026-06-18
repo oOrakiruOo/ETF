@@ -32,7 +32,7 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
-from .line_engine import check_line_settings, send_line_push_message
+from .line_engine import check_line_settings, send_line_broadcast_message, send_line_push_message
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
@@ -1006,12 +1006,29 @@ def run_line_summary() -> None:
     print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
+def run_line_broadcast_summary() -> None:
+    setup_logging()
+    output_path = _write_latest_mobile_summary()
+    text = Path(output_path).read_text(encoding="utf-8")
+    status = send_line_broadcast_message(text)
+    logging.getLogger(__name__).info("LINE broadcast summary sent: %s status=%s", output_path, status)
+    print(f"LINEへ携帯向け要約をブロードキャスト送信しました: {output_path}")
+
+
 def run_line_test() -> None:
     setup_logging()
     message = "ETF Rotation LINE test: OK"
     status = send_line_push_message(message)
     logging.getLogger(__name__).info("LINE test sent: status=%s", status)
     print("LINEへテストメッセージを送信しました。")
+
+
+def run_line_broadcast_test() -> None:
+    setup_logging()
+    message = "ETF Rotation LINE broadcast test: OK"
+    status = send_line_broadcast_message(message)
+    logging.getLogger(__name__).info("LINE broadcast test sent: status=%s", status)
+    print("LINEへブロードキャストのテストメッセージを送信しました。")
 
 
 def run_line_check() -> None:
@@ -1422,7 +1439,9 @@ def main() -> None:
             "mobile-summary",
             "line-check",
             "line-test",
+            "line-broadcast-test",
             "line-summary",
+            "line-broadcast-summary",
             "replay",
             "replay-quick",
         ],
@@ -1465,8 +1484,12 @@ def main() -> None:
         run_line_check()
     elif args.command == "line-test":
         run_line_test()
+    elif args.command == "line-broadcast-test":
+        run_line_broadcast_test()
     elif args.command == "line-summary":
         run_line_summary()
+    elif args.command == "line-broadcast-summary":
+        run_line_broadcast_summary()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":
