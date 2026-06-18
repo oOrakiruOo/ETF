@@ -1006,6 +1006,14 @@ def run_line_summary() -> None:
     print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
+def run_line_test() -> None:
+    setup_logging()
+    message = "ETF Rotation LINE test: OK"
+    status = send_line_push_message(message)
+    logging.getLogger(__name__).info("LINE test sent: status=%s", status)
+    print("LINEへテストメッセージを送信しました。")
+
+
 def run_line_check() -> None:
     setup_logging()
     settings = check_line_settings()
@@ -1413,6 +1421,7 @@ def main() -> None:
             "decision-sheet",
             "mobile-summary",
             "line-check",
+            "line-test",
             "line-summary",
             "replay",
             "replay-quick",
@@ -1454,6 +1463,8 @@ def main() -> None:
         run_mobile_summary()
     elif args.command == "line-check":
         run_line_check()
+    elif args.command == "line-test":
+        run_line_test()
     elif args.command == "line-summary":
         run_line_summary()
     elif args.command == "audit":
