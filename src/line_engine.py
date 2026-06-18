@@ -10,6 +10,13 @@ from typing import Any
 LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push"
 
 
+def check_line_settings() -> dict[str, bool]:
+    return {
+        "LINE_CHANNEL_ACCESS_TOKEN": bool(os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")),
+        "LINE_TO_USER_ID": bool(os.environ.get("LINE_TO_USER_ID")),
+    }
+
+
 def build_line_push_payload(to: str, text: str) -> dict[str, Any]:
     return {
         "to": to,

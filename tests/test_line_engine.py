@@ -4,7 +4,17 @@ import json
 
 import pytest
 
-from src.line_engine import build_line_push_payload, send_line_push_message
+from src.line_engine import build_line_push_payload, check_line_settings, send_line_push_message
+
+
+def test_check_line_settings_masks_secret_values(monkeypatch) -> None:
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "secret-token")
+    monkeypatch.delenv("LINE_TO_USER_ID", raising=False)
+
+    assert check_line_settings() == {
+        "LINE_CHANNEL_ACCESS_TOKEN": True,
+        "LINE_TO_USER_ID": False,
+    }
 
 
 def test_build_line_push_payload_uses_text_message() -> None:

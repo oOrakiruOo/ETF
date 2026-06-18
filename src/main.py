@@ -32,7 +32,7 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
-from .line_engine import send_line_push_message
+from .line_engine import check_line_settings, send_line_push_message
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
@@ -1006,6 +1006,16 @@ def run_line_summary() -> None:
     print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
+def run_line_check() -> None:
+    setup_logging()
+    settings = check_line_settings()
+    missing = [name for name, exists in settings.items() if not exists]
+    if missing:
+        print(f"LINE設定: 未設定あり ({', '.join(missing)})")
+        return
+    print("LINE設定: OK")
+
+
 def run_daily_operations(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFILE) -> None:
     run_portfolio_check()
     run_daily(refresh=refresh, profile_name=profile_name)
@@ -1402,6 +1412,7 @@ def main() -> None:
             "go-live-check",
             "decision-sheet",
             "mobile-summary",
+            "line-check",
             "line-summary",
             "replay",
             "replay-quick",
@@ -1441,6 +1452,8 @@ def main() -> None:
         run_decision_sheet()
     elif args.command == "mobile-summary":
         run_mobile_summary()
+    elif args.command == "line-check":
+        run_line_check()
     elif args.command == "line-summary":
         run_line_summary()
     elif args.command == "audit":
