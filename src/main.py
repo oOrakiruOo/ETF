@@ -69,6 +69,7 @@ from .report_engine import (
     build_signal_table,
     write_backtest_report,
     write_daily_report,
+    write_decision_brief,
     write_go_live_readiness_report,
     write_manual_decision_sheet,
     write_mobile_summary,
@@ -990,11 +991,31 @@ def _write_latest_mobile_summary() -> str:
     return str(output_path)
 
 
+def _load_latest_signal_context() -> tuple[datetime, pd.DataFrame, pd.DataFrame]:
+    report_date, signals_path = _latest_signals_path()
+    signal_table = pd.read_csv(signals_path)
+    readiness = check_go_live_readiness(report_date)
+    return report_date, signal_table, readiness
+
+
+def _write_latest_decision_brief() -> str:
+    report_date, signal_table, readiness = _load_latest_signal_context()
+    output_path = write_decision_brief(signal_table, readiness=readiness, report_date=report_date)
+    return str(output_path)
+
+
 def run_mobile_summary() -> None:
     setup_logging()
     output_path = _write_latest_mobile_summary()
     logging.getLogger(__name__).info("Mobile summary written: %s", output_path)
     print(f"携帯向け要約を作成しました: {output_path}")
+
+
+def run_decision_brief() -> None:
+    setup_logging()
+    output_path = _write_latest_decision_brief()
+    logging.getLogger(__name__).info("Decision brief written: %s", output_path)
+    print(f"買い判断ブリーフを作成しました: {output_path}")
 
 
 def run_line_summary() -> None:
@@ -1006,6 +1027,15 @@ def run_line_summary() -> None:
     print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
+def run_line_decision_brief() -> None:
+    setup_logging()
+    output_path = _write_latest_decision_brief()
+    text = Path(output_path).read_text(encoding="utf-8")
+    status = send_line_push_message(text)
+    logging.getLogger(__name__).info("LINE decision brief sent: %s status=%s", output_path, status)
+    print(f"LINEへ買い判断ブリーフを送信しました: {output_path}")
+
+
 def run_line_broadcast_summary() -> None:
     setup_logging()
     output_path = _write_latest_mobile_summary()
@@ -1013,6 +1043,15 @@ def run_line_broadcast_summary() -> None:
     status = send_line_broadcast_message(text)
     logging.getLogger(__name__).info("LINE broadcast summary sent: %s status=%s", output_path, status)
     print(f"LINEへ携帯向け要約をブロードキャスト送信しました: {output_path}")
+
+
+def run_line_broadcast_decision_brief() -> None:
+    setup_logging()
+    output_path = _write_latest_decision_brief()
+    text = Path(output_path).read_text(encoding="utf-8")
+    status = send_line_broadcast_message(text)
+    logging.getLogger(__name__).info("LINE broadcast decision brief sent: %s status=%s", output_path, status)
+    print(f"LINEへ買い判断ブリーフをブロードキャスト送信しました: {output_path}")
 
 
 def run_line_test() -> None:
@@ -1437,11 +1476,14 @@ def main() -> None:
             "go-live-check",
             "decision-sheet",
             "mobile-summary",
+            "decision-brief",
             "line-check",
             "line-test",
             "line-broadcast-test",
             "line-summary",
             "line-broadcast-summary",
+            "line-decision-brief",
+            "line-broadcast-decision-brief",
             "replay",
             "replay-quick",
         ],
@@ -1480,6 +1522,8 @@ def main() -> None:
         run_decision_sheet()
     elif args.command == "mobile-summary":
         run_mobile_summary()
+    elif args.command == "decision-brief":
+        run_decision_brief()
     elif args.command == "line-check":
         run_line_check()
     elif args.command == "line-test":
@@ -1490,6 +1534,10 @@ def main() -> None:
         run_line_summary()
     elif args.command == "line-broadcast-summary":
         run_line_broadcast_summary()
+    elif args.command == "line-decision-brief":
+        run_line_decision_brief()
+    elif args.command == "line-broadcast-decision-brief":
+        run_line_broadcast_decision_brief()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":

@@ -32,8 +32,8 @@ jobs:
       - name: Run daily operations
         run: python -m src.main daily-ops --refresh
 
-      - name: Send LINE broadcast summary
-        run: python -m src.main line-broadcast-summary
+      - name: Send LINE decision brief
+        run: python -m src.main line-broadcast-decision-brief
 
       - name: Upload daily reports
         if: always()

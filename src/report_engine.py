@@ -194,6 +194,91 @@ def write_mobile_summary(
     return output_path
 
 
+def _format_signal_row(row: dict[str, object]) -> str:
+    return (
+        f"{_mobile_value(row.get('ETF'))}: {_mobile_value(row.get('判定'))} "
+        f"/ {_mobile_value(row.get('ステージ')).replace('ステージ', 'S')} "
+        f"/ 買い差{_mobile_value(row.get('第1買いまで%'))}% "
+        f"/ RR{_mobile_value(row.get('RR'))} "
+        f"/ リスク{_mobile_value(row.get('テーマリスク'))}"
+    )
+
+
+def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) -> pd.DataFrame:
+    if signal_table.empty:
+        return signal_table
+    if tickers is None:
+        return signal_table
+    return signal_table[signal_table["ETF"].isin(tickers)]
+
+
+def write_decision_brief(
+    signal_table: pd.DataFrame,
+    readiness: pd.DataFrame | None = None,
+    output_dir: str | Path = "reports/daily",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"decision_brief_{date:%Y-%m-%d}.txt"
+    core_tickers = {"VT", "VTI", "SPY", "QQQ"}
+    buy_signals = {"強気買い候補", "買い候補"}
+    wait_signals = {"押し目待ち"}
+    risk_signals = {"利確候補", "売却候補", "リスク削減"}
+    go_hold = "GO（手動確認後）"
+    if readiness is not None and not readiness.empty and readiness["状態"].eq("Block").any():
+        go_hold = "HOLD"
+
+    core = _filter_rows(signal_table, core_tickers)
+    satellite = signal_table[~signal_table["ETF"].isin(core_tickers)] if not signal_table.empty else signal_table
+    core_buy = core[core["判定"].isin(buy_signals)]
+    core_wait = core[core["判定"].isin(wait_signals)]
+    satellite_buy = satellite[satellite["判定"].isin(buy_signals)]
+    satellite_wait = satellite[satellite["判定"].isin(wait_signals)]
+    risk_review = signal_table[signal_table["判定"].isin(risk_signals)]
+    hot_or_late = signal_table[
+        signal_table["ステージ"].astype(str).str.contains("ステージ4|ステージ5", na=False)
+    ]
+
+    lines = [
+        f"ETF Rotation 買い判断 {date:%Y-%m-%d}",
+        f"総合: {go_hold}",
+        "",
+        f"新規買い: {'あり' if not satellite_buy.empty or not core_buy.empty else 'なし'}",
+        f"コア買い: {'あり' if not core_buy.empty else '待ち'}",
+        f"サテライト買い: {'あり' if not satellite_buy.empty else '待ち'}",
+        f"利確/売却確認: {'あり' if not risk_review.empty else 'なし'}",
+        "",
+        "コア:",
+    ]
+    if core_buy.empty and core_wait.empty:
+        lines.append("買い候補なし。VT/VTI/SPY/QQQは待ち。")
+    for row in pd.concat([core_buy, core_wait]).head(4).to_dict("records"):
+        lines.append(_format_signal_row(row))
+
+    lines.extend(["", "サテライト:"])
+    if satellite_buy.empty and satellite_wait.empty:
+        lines.append("買い候補なし。テーマETFは待ち。")
+    for row in pd.concat([satellite_buy, satellite_wait]).head(6).to_dict("records"):
+        lines.append(_format_signal_row(row))
+
+    lines.extend(["", "買わない条件:"])
+    lines.append("ステージ4過熱期、ステージ5失速期、利確候補、売却候補は新規買いしない。")
+    if not hot_or_late.empty:
+        names = ", ".join(hot_or_late["ETF"].head(8).astype(str).tolist())
+        lines.append(f"該当: {names}")
+
+    lines.extend(["", "確認:"])
+    if risk_review.empty:
+        lines.append("利確/売却確認なし。")
+    else:
+        for row in risk_review.head(6).to_dict("records"):
+            lines.append(_format_signal_row(row))
+    lines.extend(["", "今日やること: 買い急がず、利確/売却候補だけ確認。実行は手動。"])
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
 def write_signal_snapshot(
     signal_table: pd.DataFrame,
     output_dir: str | Path = "data/processed/signals",

@@ -7,6 +7,7 @@ import pandas as pd
 from src.report_engine import (
     build_signal_table,
     write_daily_report,
+    write_decision_brief,
     write_daily_health_report,
     write_go_live_readiness_report,
     write_manual_decision_sheet,
@@ -106,6 +107,67 @@ def test_write_mobile_summary_outputs_phone_friendly_ranking(tmp_path) -> None:
     assert "GO/HOLD: GO（手動確認後）" in text
     assert "手動判断: OK 対象1 判断済1 未判断0" in text
     assert "1. VGT ETF84.43 テーマ67.39 見送り RR0.87 リスク中" in text
+
+
+def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "VT",
+                "テーマ": "Global",
+                "ETFスコア": 61.0,
+                "テーマスコア": 60.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ4: 過熱期",
+                "現在価格": 100.0,
+                "第1買い": 98.0,
+                "第1買いまで%": -2.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 110.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 0.8,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+            {
+                "ETF": "SMH",
+                "テーマ": "半導体",
+                "ETFスコア": 72.0,
+                "テーマスコア": 79.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ4: 過熱期",
+                "現在価格": 200.0,
+                "第1買い": 190.0,
+                "第1買いまで%": -5.0,
+                "第2買い": 180.0,
+                "第3買い": 170.0,
+                "保守目標": 230.0,
+                "強気目標": 250.0,
+                "停止価格": 160.0,
+                "RR": 0.5,
+                "判定": "利確候補",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 19),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "新規買い: なし" in text
+    assert "コア買い: 待ち" in text
+    assert "サテライト買い: 待ち" in text
+    assert "ステージ4過熱期、ステージ5失速期" in text
+    assert "SMH: 利確候補" in text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:

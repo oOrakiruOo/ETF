@@ -122,6 +122,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\show_latest_status.ps1
 ```
 
+LINEの正式通知はランキングではなく、コア/サテライトの買い判断を優先する買い判断ブリーフを使います。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command line-broadcast-decision-brief
+```
+
 GitHub ActionsでPCを起動せずに日次実行とLINE送信を行う場合は、GitHubリポジトリの `Settings > Secrets and variables > Actions` に以下を登録します。
 
 - `LINE_CHANNEL_ACCESS_TOKEN`
