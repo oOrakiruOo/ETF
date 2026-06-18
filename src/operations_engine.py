@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .line_engine import check_line_settings
 from .pdca_engine import summarize_manual_decisions
 from .utils import PROJECT_ROOT
 
@@ -131,6 +132,14 @@ def _manual_decision_gate(project_root: Path, date: datetime) -> dict[str, str]:
     return {"判定項目": "手動判断ログ", "状態": "OK", "理由": str(summary.get("理由", "確認漏れなし"))}
 
 
+def _line_settings_gate() -> dict[str, str]:
+    settings = check_line_settings()
+    missing = [name for name, exists in settings.items() if not exists]
+    if missing:
+        return {"判定項目": "LINE設定", "状態": "Block", "理由": f"未設定: {', '.join(missing)}"}
+    return {"判定項目": "LINE設定", "状態": "OK", "理由": "携帯通知の送信設定あり"}
+
+
 def check_go_live_readiness(
     report_date: datetime | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -165,6 +174,7 @@ def check_go_live_readiness(
             "理由": action_note,
         },
         _manual_decision_gate(project_root, date),
+        _line_settings_gate(),
         {
             "判定項目": "売買実行",
             "状態": "Review",

@@ -87,14 +87,30 @@ def test_check_operations_status_shows_open_weekly_action_count(tmp_path) -> Non
     assert weekly_actions["補足"] == "未完了Act 1件"
 
 
-def test_check_go_live_readiness_blocks_when_artifacts_are_missing(tmp_path) -> None:
+def test_check_go_live_readiness_blocks_when_artifacts_are_missing(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("LINE_TO_USER_ID", "U123")
     readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
     blockers = readiness[readiness["状態"].eq("Block")]
     assert {"運用成果物", "日次ヘルス", "週次ヘルス"}.issubset(set(blockers["判定項目"]))
     assert "売買実行" in set(readiness[readiness["状態"].eq("Review")]["判定項目"])
 
 
-def test_check_go_live_readiness_accepts_recent_weekly_health(tmp_path) -> None:
+def test_check_go_live_readiness_blocks_when_line_settings_are_missing(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("LINE_CHANNEL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("LINE_TO_USER_ID", raising=False)
+
+    readiness = check_go_live_readiness(datetime(2099, 1, 2), project_root=tmp_path)
+    line_gate = readiness[readiness["判定項目"].eq("LINE設定")].iloc[0]
+
+    assert line_gate["状態"] == "Block"
+    assert "LINE_CHANNEL_ACCESS_TOKEN" in line_gate["理由"]
+    assert "LINE_TO_USER_ID" in line_gate["理由"]
+
+
+def test_check_go_live_readiness_accepts_recent_weekly_health(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("LINE_TO_USER_ID", "U123")
     daily_dir = tmp_path / "reports" / "daily"
     weekly_dir = tmp_path / "reports" / "weekly"
     notification_dir = tmp_path / "data" / "processed" / "notifications"
@@ -133,7 +149,9 @@ def test_check_go_live_readiness_accepts_recent_weekly_health(tmp_path) -> None:
     assert weekly_gate["状態"] == "OK"
 
 
-def test_check_go_live_readiness_reviews_unfinished_manual_decisions(tmp_path) -> None:
+def test_check_go_live_readiness_reviews_unfinished_manual_decisions(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("LINE_TO_USER_ID", "U123")
     decisions_dir = tmp_path / "data" / "processed" / "decisions"
     decisions_dir.mkdir(parents=True)
     pd.DataFrame(
