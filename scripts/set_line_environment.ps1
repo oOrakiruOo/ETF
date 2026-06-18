@@ -1,5 +1,6 @@
 param(
-    [string]$ToUserId
+    [string]$ToUserId,
+    [switch]$TokenFromClipboard
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,13 +11,18 @@ if (-not $ToUserId) {
     $ToUserId = Read-Host "LINE_TO_USER_ID"
 }
 
-$SecureToken = Read-Host "LINE_CHANNEL_ACCESS_TOKEN" -AsSecureString
-$TokenPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureToken)
-try {
-    $Token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($TokenPointer)
+if ($TokenFromClipboard) {
+    $Token = (Get-Clipboard -Raw).Trim()
 }
-finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($TokenPointer)
+else {
+    $SecureToken = Read-Host "LINE_CHANNEL_ACCESS_TOKEN" -AsSecureString
+    $TokenPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureToken)
+    try {
+        $Token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($TokenPointer)
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($TokenPointer)
+    }
 }
 
 if (-not $Token) {
