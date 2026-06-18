@@ -163,11 +163,20 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
         report_date=datetime(2026, 6, 19),
     )
     text = output_path.read_text(encoding="utf-8")
+    assert "ETF Rotation Daily 2026-06-19" in text
+    assert "🟣 CHECK SELL" in text
+    assert "今日は新規買いより、保有ETFの確認を優先。" in text
+    assert "今日やること:" in text
     assert "新規買い: なし" in text
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
-    assert "ステージ4過熱期、ステージ5失速期" in text
-    assert "SMH: 利確候補" in text
+    assert "利確/売却確認: あり" in text
+    assert "VT/VTI/SPY/QQQは待ち。" in text
+    assert "テーマETFの新規買い候補なし。" in text
+    assert "状態: 過熱" in text
+    assert "確認: 利確候補" in text
+    assert "買い増ししない。保有継続/一部利確を手動確認。" in text
+    assert "※これは投資助言ではありません。" in text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:

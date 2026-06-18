@@ -204,6 +204,31 @@ def _format_signal_row(row: dict[str, object]) -> str:
     )
 
 
+def _stage_label(stage: object) -> str:
+    text = _mobile_value(stage)
+    if "ステージ4" in text:
+        return "過熱"
+    if "ステージ5" in text:
+        return "失速"
+    if "ステージ3" in text:
+        return "加速"
+    if "ステージ2" in text:
+        return "初動"
+    if "ステージ1" in text:
+        return "構想"
+    return text
+
+
+def _short_detail(row: dict[str, object]) -> str:
+    stage = _mobile_value(row.get("ステージ")).replace("ステージ", "S")
+    return (
+        f"{_mobile_value(row.get('ETF'))}: {stage} / "
+        f"RR{_mobile_value(row.get('RR'))} / "
+        f"買い差 {_mobile_value(row.get('第1買いまで%'))}% / "
+        f"リスク{_mobile_value(row.get('テーマリスク'))}"
+    )
+
+
 def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) -> pd.DataFrame:
     if signal_table.empty:
         return signal_table
@@ -225,10 +250,6 @@ def write_decision_brief(
     buy_signals = {"強気買い候補", "買い候補"}
     wait_signals = {"押し目待ち"}
     risk_signals = {"利確候補", "売却候補", "リスク削減"}
-    go_hold = "GO（手動確認後）"
-    if readiness is not None and not readiness.empty and readiness["状態"].eq("Block").any():
-        go_hold = "HOLD"
-
     core = _filter_rows(signal_table, core_tickers)
     satellite = signal_table[~signal_table["ETF"].isin(core_tickers)] if not signal_table.empty else signal_table
     core_buy = core[core["判定"].isin(buy_signals)]
@@ -239,42 +260,105 @@ def write_decision_brief(
     hot_or_late = signal_table[
         signal_table["ステージ"].astype(str).str.contains("ステージ4|ステージ5", na=False)
     ]
+    defense = False
+    if readiness is not None and not readiness.empty:
+        defense = readiness["状態"].eq("Block").any()
+    if not signal_table.empty:
+        defense = defense or signal_table["テーマリスク"].astype(str).eq("高").any()
+
+    has_buy = not core_buy.empty or not satellite_buy.empty
+    has_sell_check = not risk_review.empty
+    if defense:
+        action_label = "🔴 DEFENSE"
+        action_text = "新規買いは慎重判断。リスク確認を優先してください。"
+    elif has_sell_check:
+        action_label = "🟣 CHECK SELL"
+        action_text = "今日は新規買いより、保有ETFの確認を優先。"
+    elif has_buy:
+        action_label = "🟢 CHECK BUY"
+        action_text = "買い候補があります。手動確認してください。"
+    else:
+        action_label = "🟡 WAIT"
+        action_text = "本日の新規買い候補はありません。"
+
+    buy_names = pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist() if has_buy else []
+    sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
+    summary_lines = []
+    if has_buy:
+        summary_lines.append(f"買い候補を手動確認: {', '.join(buy_names)}")
+    else:
+        summary_lines.append("新規買いは見送り。")
+    if has_sell_check:
+        summary_lines.append(f"{', '.join(sell_names)}の保有状況だけ確認。")
+    elif not has_buy:
+        summary_lines.append("今日は何もしないことが基本方針。")
+
+    reason_lines = []
+    if not has_buy:
+        reason_lines.append("買い候補なし")
+    if not hot_or_late.empty:
+        reason_lines.append("一部テーマは過熱または失速")
+    if has_sell_check:
+        reason_lines.append("新規買いより保有確認を優先")
+    if defense:
+        reason_lines.append("リスク確認を優先")
 
     lines = [
-        f"ETF Rotation 買い判断 {date:%Y-%m-%d}",
-        f"総合: {go_hold}",
+        f"ETF Rotation Daily {date:%Y-%m-%d}",
         "",
-        f"新規買い: {'あり' if not satellite_buy.empty or not core_buy.empty else 'なし'}",
-        f"コア買い: {'あり' if not core_buy.empty else '待ち'}",
-        f"サテライト買い: {'あり' if not satellite_buy.empty else '待ち'}",
-        f"利確/売却確認: {'あり' if not risk_review.empty else 'なし'}",
+        action_label,
+        action_text,
+        "",
+        "今日やること:",
+        *summary_lines,
+        "",
+        "買い判断:",
+        f"新規買い: {'あり' if has_buy else 'なし'}",
+        f"コア買い: {'候補あり' if not core_buy.empty else '待ち'}",
+        f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
+        f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
         "コア:",
     ]
     if core_buy.empty and core_wait.empty:
-        lines.append("買い候補なし。VT/VTI/SPY/QQQは待ち。")
+        lines.append("VT/VTI/SPY/QQQは待ち。")
+        lines.append("積立は通常ルール優先。")
     for row in pd.concat([core_buy, core_wait]).head(4).to_dict("records"):
         lines.append(_format_signal_row(row))
 
     lines.extend(["", "サテライト:"])
     if satellite_buy.empty and satellite_wait.empty:
-        lines.append("買い候補なし。テーマETFは待ち。")
+        lines.append("テーマETFの新規買い候補なし。")
+        lines.append("過熱・失速銘柄は買い増ししない。")
     for row in pd.concat([satellite_buy, satellite_wait]).head(6).to_dict("records"):
         lines.append(_format_signal_row(row))
 
-    lines.extend(["", "買わない条件:"])
-    lines.append("ステージ4過熱期、ステージ5失速期、利確候補、売却候補は新規買いしない。")
-    if not hot_or_late.empty:
-        names = ", ".join(hot_or_late["ETF"].head(8).astype(str).tolist())
-        lines.append(f"該当: {names}")
+    if has_sell_check:
+        lines.append("")
+        lines.append("確認対象:")
+        for row in risk_review.head(4).to_dict("records"):
+            ticker = _mobile_value(row.get("ETF"))
+            signal = _mobile_value(row.get("判定"))
+            stage = _stage_label(row.get("ステージ"))
+            if signal == "利確候補":
+                action = "買い増ししない。保有継続/一部利確を手動確認。"
+            elif signal == "売却候補":
+                action = "新規買いしない。保有継続可否を手動確認。"
+            else:
+                action = "リスクを手動確認。"
+            lines.extend([ticker, f"状態: {stage}", f"確認: {signal}", f"行動: {action}", ""])
+        if lines[-1] == "":
+            lines.pop()
 
-    lines.extend(["", "確認:"])
-    if risk_review.empty:
-        lines.append("利確/売却確認なし。")
-    else:
-        for row in risk_review.head(6).to_dict("records"):
-            lines.append(_format_signal_row(row))
-    lines.extend(["", "今日やること: 買い急がず、利確/売却候補だけ確認。実行は手動。"])
+    lines.extend(["", "理由:"])
+    lines.extend([f"・{reason}" for reason in reason_lines[:4]])
+
+    if has_sell_check:
+        lines.extend(["", "詳細:"])
+        for row in risk_review.head(4).to_dict("records"):
+            lines.append(_short_detail(row))
+
+    lines.extend(["", "※これは投資助言ではありません。最終判断はご自身で行ってください。"])
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return output_path
 
