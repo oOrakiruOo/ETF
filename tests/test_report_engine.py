@@ -162,7 +162,14 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
         readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
         portfolio=pd.DataFrame(
             [
-                {"ticker": "ORCAN", "market_value": 1800000, "weight_pct": 18.0, "asset_class": "fund", "signal_scope": "core"},
+                {
+                    "ticker": "ORCAN",
+                    "display_name": "NISA オルカン",
+                    "market_value": 1800000,
+                    "weight_pct": 18.0,
+                    "asset_class": "fund",
+                    "signal_scope": "core",
+                },
                 {"ticker": "QQQ", "market_value": 120000, "weight_pct": 1.2, "asset_class": "etf", "signal_scope": "etf_signal"},
                 {
                     "ticker": "SOFI",
@@ -194,10 +201,10 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "利確/売却確認: あり" in text
     assert "保有サマリー:" in text
     assert "評価額合計: 3,020,000円" in text
-    assert "ORCAN: 18.0%" in text
+    assert "NISA オルカン: 18.0%" in text
     assert "保有の扱い:" in text
     assert "QQQ: ETF信号対象" in text
-    assert "ORCAN: コア資産" in text
+    assert "NISA オルカン: コア資産" in text
     assert "SOFI: ETF信号の参考外" in text
     assert "参考保有の注意:" in text
     assert "SOFI: 11.0% / 保有継続 / 通常監視" in text
@@ -266,7 +273,13 @@ def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> 
     )
     portfolio = pd.DataFrame(
         [
-            {"ticker": "SOFI", "weight_pct": 12.0, "asset_class": "stock", "signal_scope": "reference"},
+            {
+                "ticker": "SOFI",
+                "display_name": "SOFI",
+                "weight_pct": 12.0,
+                "asset_class": "stock",
+                "signal_scope": "reference",
+            },
             {"ticker": "QQQ", "weight_pct": 2.0, "asset_class": "etf", "signal_scope": "etf_signal"},
         ]
     )

@@ -241,7 +241,7 @@ def write_weekly_line_summary(
             scope = _portfolio_scope(row)
             weight = row.get("weight_pct")
             if scope == "reference" and pd.notna(weight) and float(weight) >= 10.0:
-                reference_rows.append(f"{_mobile_value(row.get('ticker'))}: {float(weight):.1f}%")
+                reference_rows.append(f"{_holding_name(row)}: {float(weight):.1f}%")
         lines.extend(["", "参考保有:"])
         if reference_rows:
             lines.extend(reference_rows[:4])
@@ -414,6 +414,21 @@ def _portfolio_scope(row: dict[str, object]) -> str:
     return "etf_signal"
 
 
+def _holding_name(row: dict[str, object]) -> str:
+    display_name = _mobile_value(row.get("display_name")).strip()
+    if display_name and display_name != "-":
+        return display_name
+    fallback_names = {
+        "401K_FOREIGN_INDEX": "401k 外国株式インデックス",
+        "ORCAN": "NISA オルカン",
+        "TDK": "TDK",
+        "SOFI": "SOFI",
+        "QQQ": "QQQ",
+    }
+    ticker = _mobile_value(row.get("ticker")).upper()
+    return fallback_names.get(ticker, _mobile_value(row.get("ticker")))
+
+
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -527,21 +542,23 @@ def write_decision_brief(
             portfolio_summary_lines.append(f"評価額合計: {total_value:,.0f}円")
         top_holdings = portfolio_frame.sort_values("weight_pct", ascending=False).head(5)
         for row in top_holdings.to_dict("records"):
-            ticker = _mobile_value(row.get("ticker"))
+            holding_name = _holding_name(row)
             weight = row.get("weight_pct")
             if pd.notna(weight):
-                portfolio_summary_lines.append(f"{ticker}: {float(weight):.1f}%")
+                portfolio_summary_lines.append(f"{holding_name}: {float(weight):.1f}%")
                 scope = _portfolio_scope(row)
                 if scope == "etf_signal":
-                    portfolio_signal_lines.append(f"{ticker}: ETF信号対象")
+                    portfolio_signal_lines.append(f"{holding_name}: ETF信号対象")
                 elif scope == "core":
-                    portfolio_reference_lines.append(f"{ticker}: コア資産")
+                    portfolio_reference_lines.append(f"{holding_name}: コア資産")
                 else:
-                    portfolio_reference_lines.append(f"{ticker}: ETF信号の参考外")
+                    portfolio_reference_lines.append(f"{holding_name}: ETF信号の参考外")
                     if float(weight) >= 10.0:
                         portfolio_action = _mobile_value(row.get("portfolio_action"))
                         portfolio_reason = _mobile_value(row.get("portfolio_reason"))
-                        reference_alert_lines.append(f"{ticker}: {float(weight):.1f}% / {portfolio_action} / {portfolio_reason}")
+                        reference_alert_lines.append(
+                            f"{holding_name}: {float(weight):.1f}% / {portfolio_action} / {portfolio_reason}"
+                        )
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",

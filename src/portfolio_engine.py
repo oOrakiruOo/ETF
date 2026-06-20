@@ -9,6 +9,7 @@ from .utils import PROJECT_ROOT
 
 PORTFOLIO_COLUMNS = [
     "ticker",
+    "display_name",
     "theme",
     "quantity",
     "avg_price",
