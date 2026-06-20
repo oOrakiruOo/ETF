@@ -199,6 +199,9 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "ルール破り防止:" in text
     assert "上がっても飛びつかない。" in text
     assert "下がってもナンピンしない。" in text
+    assert "今日の自己確認:" in text
+    assert "守れた / 破った / 保留" in text
+    assert "破った場合は週次PDCAで原因確認。" in text
     assert "新規買い: なし" in text
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
