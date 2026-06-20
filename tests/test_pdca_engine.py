@@ -10,6 +10,7 @@ from src.pdca_engine import (
     propose_signal_improvements,
     run_avoid_policy_search,
     run_entry_parameter_search,
+    simulate_user_friction_pdca,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
     summarize_action_label_history,
@@ -80,6 +81,25 @@ def test_summarize_action_label_history_groups_snapshots_by_product_label() -> N
     assert labels["🟡 WAIT"] == 1
     defense = summary[summary["行動ラベル"].eq("🔴 DEFENSE")].iloc[0]
     assert defense["回避正解率%"] == 100.0
+
+
+def test_simulate_user_friction_pdca_flags_long_term_frictions() -> None:
+    action_label_history = pd.DataFrame(
+        [
+            {"行動ラベル": "🔴 DEFENSE", "日数": 6},
+            {"行動ラベル": "🟢 CHECK BUY", "日数": 0},
+            {"行動ラベル": "🟡 WAIT", "日数": 0},
+        ]
+    )
+    portfolio = pd.DataFrame(
+        [{"ticker": "SOFI", "weight_pct": 12.0, "signal_scope": "reference"}]
+    )
+    result = simulate_user_friction_pdca(action_label_history, portfolio, years=30)
+
+    complaints = result["不満"].tolist()
+    assert "待ての通知が多く、飽きる" in complaints
+    assert "買い候補が少なすぎて使う意味が分かりにくい" in complaints
+    assert "ETF信号対象外の保有が大きく、通知だけでは不安" in complaints
 
 
 def test_propose_signal_improvements_flags_weak_buy_signals() -> None:

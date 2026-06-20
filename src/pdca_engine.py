@@ -574,6 +574,121 @@ def summarize_action_label_history(
     return pd.DataFrame(rows)
 
 
+def simulate_user_friction_pdca(
+    action_label_history: pd.DataFrame,
+    portfolio: pd.DataFrame | None = None,
+    years: int = 30,
+    trading_days_per_year: int = 252,
+) -> pd.DataFrame:
+    total_days = years * trading_days_per_year
+    rows: list[dict[str, object]] = []
+    if action_label_history.empty or "行動ラベル" not in action_label_history.columns:
+        return pd.DataFrame(
+            [
+                {
+                    "不満": "判定履歴が不足",
+                    "深刻度": "高",
+                    "30年換算": "",
+                    "検証": "行動ラベル履歴なし",
+                    "修正案": "replay-quickまたはweekly-line-summaryを先に実行",
+                }
+            ]
+        )
+    labels = action_label_history.copy()
+    labels["日数"] = pd.to_numeric(labels.get("日数", 0), errors="coerce").fillna(0)
+    observed_days = float(labels["日数"].sum())
+    if observed_days <= 0:
+        observed_days = 1.0
+
+    def projected_days(label: str) -> int:
+        count = float(labels.loc[labels["行動ラベル"].astype(str).eq(label), "日数"].sum())
+        return int(round(count / observed_days * total_days))
+
+    defense_days = projected_days("🔴 DEFENSE")
+    buy_days = projected_days("🟢 CHECK BUY")
+    wait_days = projected_days("🟡 WAIT")
+    sell_days = projected_days("🟣 CHECK SELL")
+
+    if defense_days / total_days >= 0.6:
+        rows.append(
+            {
+                "不満": "待ての通知が多く、飽きる",
+                "深刻度": "高",
+                "30年換算": f"DEFENSE 約{defense_days:,}日",
+                "検証": "防御判定が長期利用の大半を占める",
+                "修正案": "連続DEFENSE日数と、次に解除される条件を通知に追加",
+            }
+        )
+    if buy_days / total_days <= 0.05:
+        rows.append(
+            {
+                "不満": "買い候補が少なすぎて使う意味が分かりにくい",
+                "深刻度": "中",
+                "30年換算": f"CHECK BUY 約{buy_days:,}日",
+                "検証": "買い候補が出ない期間が長い",
+                "修正案": "監視候補に、買い条件までの距離と解除条件を表示",
+            }
+        )
+    if wait_days == 0:
+        rows.append(
+            {
+                "不満": "WAITとDEFENSEの違いが体感しにくい",
+                "深刻度": "中",
+                "30年換算": "WAIT 0日",
+                "検証": "中立待機の表示機会がない",
+                "修正案": "DEFENSEは市場リスク、WAITは条件未達として説明を分ける",
+            }
+        )
+    if sell_days / total_days >= 0.3:
+        rows.append(
+            {
+                "不満": "売却確認が多く、毎回何を見ればよいか迷う",
+                "深刻度": "中",
+                "30年換算": f"CHECK SELL 約{sell_days:,}日",
+                "検証": "保有確認の頻度が高い",
+                "修正案": "実保有銘柄と市場リスク対象を分けて表示",
+            }
+        )
+
+    if portfolio is not None and not portfolio.empty:
+        portfolio_frame = portfolio.copy()
+        portfolio_frame["weight_pct"] = pd.to_numeric(portfolio_frame.get("weight_pct", 0), errors="coerce").fillna(0)
+        reference_weight = float(
+            portfolio_frame.loc[
+                portfolio_frame.get("signal_scope", pd.Series("", index=portfolio_frame.index)).astype(str).eq("reference"),
+                "weight_pct",
+            ].sum()
+        )
+        max_reference_weight = float(
+            portfolio_frame.loc[
+                portfolio_frame.get("signal_scope", pd.Series("", index=portfolio_frame.index)).astype(str).eq("reference"),
+                "weight_pct",
+            ].max()
+            or 0.0
+        )
+        if reference_weight >= 20.0 or max_reference_weight >= 10.0:
+            rows.append(
+                {
+                    "不満": "ETF信号対象外の保有が大きく、通知だけでは不安",
+                    "深刻度": "中",
+                    "30年換算": f"参考保有比率 {reference_weight:.1f}%",
+                    "検証": "個別株・参考保有が一定比率を超える",
+                    "修正案": "参考保有のサイズ注意と、買い増し別枠確認を表示",
+                }
+            )
+    if not rows:
+        rows.append(
+            {
+                "不満": "大きな不満シナリオなし",
+                "深刻度": "低",
+                "30年換算": f"対象 {total_days:,}営業日",
+                "検証": "行動ラベルの偏りは許容範囲",
+                "修正案": "現行表示を維持",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def propose_signal_improvements(signal_accuracy: pd.DataFrame) -> list[str]:
     if signal_accuracy.empty:
         return ["シグナル履歴が不足。日次レポートを蓄積し、翌週に1日/5日/20日後リターンを再評価"]

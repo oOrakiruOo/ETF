@@ -182,6 +182,7 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
                 },
             ]
         ),
+        defense_streak_days=3,
         output_dir=tmp_path,
         report_date=datetime(2026, 6, 19),
     )
@@ -252,6 +253,7 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
         readiness=pd.DataFrame(
             [{"判定項目": "データ鮮度", "状態": "Block", "理由": "最新シグナルは2026-06-18（2日前）"}]
         ),
+        defense_streak_days=2,
         output_dir=tmp_path,
         report_date=datetime(2026, 6, 18),
     )
@@ -260,6 +262,9 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "最新シグナルは2026-06-18（2日前）" in text
     assert "この通知は新規売買判断に使わないでください。" in text
     assert "🔴 DEFENSE" in text
+    assert "DEFENSE継続:" in text
+    assert "2日" in text
+    assert "解除条件:" in text
 
 
 def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> None:

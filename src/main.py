@@ -60,6 +60,7 @@ from .pdca_engine import (
     propose_signal_improvements,
     run_entry_parameter_search,
     run_avoid_policy_search,
+    simulate_user_friction_pdca,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
     summarize_action_label_history,
@@ -87,6 +88,7 @@ from .report_engine import (
     write_replay_pdca_report,
     write_selection_audit_report,
     write_signal_snapshot,
+    write_user_friction_simulation_report,
     write_weekly_health_report,
     write_weekly_line_summary,
     write_weekly_pdca_report,
@@ -962,6 +964,26 @@ def run_weekly_line_summary() -> None:
     print(f"週次LINE要約を作成しました: {output_path}")
 
 
+def run_user_friction_simulation() -> None:
+    setup_logging()
+    recent_signals = load_recent_signal_history()
+    labels = build_action_label_by_snapshot(recent_signals)
+    action_label_history = (
+        labels["行動ラベル"].value_counts().reindex(ACTION_LABEL_ORDER, fill_value=0).reset_index()
+        if not labels.empty
+        else pd.DataFrame()
+    )
+    if not action_label_history.empty:
+        action_label_history.columns = ["行動ラベル", "日数"]
+    portfolio = load_portfolio()
+    if not portfolio.empty:
+        portfolio = evaluate_portfolio_actions(update_portfolio_prices(portfolio, {}))
+    friction_table = simulate_user_friction_pdca(action_label_history, portfolio)
+    output_path = write_user_friction_simulation_report(friction_table)
+    logging.getLogger(__name__).info("User friction simulation report written: %s", output_path)
+    print(f"ユーザー不満シミュレーションを作成しました: {output_path}")
+
+
 def run_line_broadcast_weekly_summary() -> None:
     setup_logging()
     output_path = _write_weekly_line_summary()
@@ -1065,7 +1087,23 @@ def _write_latest_decision_brief() -> str:
     report_date, signal_table, readiness = _load_latest_signal_context()
     current_prices = dict(zip(signal_table["ETF"], signal_table["現在価格"], strict=False)) if not signal_table.empty else {}
     portfolio = evaluate_portfolio_actions(update_portfolio_prices(load_portfolio(), current_prices))
-    output_path = write_decision_brief(signal_table, readiness=readiness, portfolio=portfolio, report_date=report_date)
+    recent_labels = build_action_label_by_snapshot(load_recent_signal_history())
+    defense_streak_days = None
+    if not recent_labels.empty:
+        streak = 0
+        for label in recent_labels.sort_values("snapshot", ascending=False)["行動ラベル"].astype(str).tolist():
+            if label == "🔴 DEFENSE":
+                streak += 1
+            else:
+                break
+        defense_streak_days = streak
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=readiness,
+        portfolio=portfolio,
+        defense_streak_days=defense_streak_days,
+        report_date=report_date,
+    )
     return str(output_path)
 
 
@@ -1536,6 +1574,7 @@ def main() -> None:
             "audit",
             "weekly",
             "weekly-line-summary",
+            "user-friction-sim",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1575,6 +1614,8 @@ def main() -> None:
         run_weekly()
     elif args.command == "weekly-line-summary":
         run_weekly_line_summary()
+    elif args.command == "user-friction-sim":
+        run_user_friction_simulation()
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":

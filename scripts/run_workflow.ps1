@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("daily", "daily-ops", "weekly", "weekly-line-summary", "portfolio-check", "notification-summary", "notification-plan", "notification-packets", "daily-health", "weekly-health", "operations-status", "go-live-check", "decision-sheet", "mobile-summary", "decision-brief", "line-check", "line-test", "line-broadcast-test", "line-summary", "line-broadcast-summary", "line-decision-brief", "line-broadcast-decision-brief", "line-broadcast-weekly-summary", "replay-quick", "replay", "backtest")]
+    [ValidateSet("daily", "daily-ops", "weekly", "weekly-line-summary", "user-friction-sim", "portfolio-check", "notification-summary", "notification-plan", "notification-packets", "daily-health", "weekly-health", "operations-status", "go-live-check", "decision-sheet", "mobile-summary", "decision-brief", "line-check", "line-test", "line-broadcast-test", "line-summary", "line-broadcast-summary", "line-decision-brief", "line-broadcast-decision-brief", "line-broadcast-weekly-summary", "replay-quick", "replay", "backtest")]
     [string]$Command = "daily",
     [switch]$Refresh
 )

@@ -283,6 +283,38 @@ def write_weekly_line_summary(
     return output_path
 
 
+def write_user_friction_simulation_report(
+    friction_table: pd.DataFrame,
+    output_dir: str | Path = "reports/pdca",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"user_friction_simulation_{date:%Y-%m-%d}.md"
+    high_or_mid = (
+        friction_table[friction_table["深刻度"].isin(["高", "中"])]
+        if not friction_table.empty and "深刻度" in friction_table.columns
+        else pd.DataFrame()
+    )
+    next_action = "現行表示を維持"
+    if not high_or_mid.empty:
+        next_action = str(high_or_mid.iloc[0].get("修正案", "改善候補を確認"))
+    content = [
+        f"# user_friction_simulation {date:%Y-%m-%d}",
+        "",
+        "30年分の利用体験を高速エミュレートし、テストユーザーが感じる不満を抽出します。",
+        "これは未来予測ではなく、過去/直近の判定分布を長期利用体験へ拡大したUX検証です。",
+        "",
+        "## 不満シナリオ",
+        friction_table.to_markdown(index=False) if not friction_table.empty else "不満シナリオなし",
+        "",
+        "## 次の修正候補",
+        next_action,
+    ]
+    output_path.write_text("\n".join(content), encoding="utf-8")
+    return output_path
+
+
 def _format_signal_row(row: dict[str, object]) -> str:
     return (
         f"{_mobile_value(row.get('ETF'))}: {_mobile_value(row.get('判定'))} "
@@ -453,6 +485,7 @@ def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
     portfolio: pd.DataFrame | None = None,
+    defense_streak_days: int | None = None,
     output_dir: str | Path = "reports/daily",
     report_date: datetime | None = None,
 ) -> Path:
@@ -600,6 +633,18 @@ def write_decision_brief(
         action_label,
         action_text,
         "",
+    ])
+    if defense and defense_streak_days is not None:
+        lines.extend(
+            [
+                "DEFENSE継続:",
+                f"{defense_streak_days}日",
+                "解除条件:",
+                "市場スコア36以上、リスク対象減少、過熱/失速の改善",
+                "",
+            ]
+        )
+    lines.extend([
         "今日やること:",
         *today_actions,
         "",
