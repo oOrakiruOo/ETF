@@ -203,11 +203,12 @@ def write_weekly_line_summary(
     date = report_date or datetime.now()
     directory = ensure_dir(output_dir)
     output_path = PROJECT_ROOT / directory / f"weekly_line_summary_{date:%Y-%m-%d}.txt"
-    lines = [
-        f"ETF Rotation Weekly {date:%Y-%m-%d}",
-        "",
-        "今週の確認:",
-    ]
+    defense_days = 0
+    buy_days = 0
+    wait_days = 0
+    sell_days = 0
+    weekly_label = "🟡 WAIT"
+    weekly_text = "待機中心の週でした。"
     if action_label_history is not None and not action_label_history.empty:
         labels = action_label_history.copy()
         labels["日数"] = pd.to_numeric(labels["日数"], errors="coerce").fillna(0)
@@ -216,45 +217,64 @@ def write_weekly_line_summary(
         buy_days = int(label_days.get("🟢 CHECK BUY", 0))
         wait_days = int(label_days.get("🟡 WAIT", 0))
         sell_days = int(label_days.get("🟣 CHECK SELL", 0))
-        lines.extend(
-            [
-                f"DEFENSE: {defense_days}日",
-                f"CHECK BUY: {buy_days}日",
-                f"CHECK SELL: {sell_days}日",
-                f"WAIT: {wait_days}日",
-            ]
-        )
         if defense_days > buy_days:
-            lines.append("評価: 買い急ぎを抑える週")
+            weekly_label = "🔴 DEFENSE"
+            weekly_text = "買い急ぎを抑える週でした。"
         elif buy_days:
-            lines.append("評価: 買い候補を手動確認する週")
+            weekly_label = "🟢 CHECK BUY"
+            weekly_text = "買い候補を手動確認する週でした。"
+        elif sell_days:
+            weekly_label = "🟣 CHECK SELL"
+            weekly_text = "保有確認を優先する週でした。"
         else:
-            lines.append("評価: 待機中心")
+            weekly_label = "🟡 WAIT"
+            weekly_text = "待機中心の週でした。"
     else:
-        lines.append("行動ラベル検証なし")
+        weekly_label = "🟡 WAIT"
+        weekly_text = "週次データは未集計です。"
 
+    reference_rows = []
     if portfolio is not None and not portfolio.empty:
         frame = portfolio.copy()
         frame["weight_pct"] = pd.to_numeric(frame.get("weight_pct", pd.Series(dtype=float)), errors="coerce")
-        reference_rows = []
         for row in frame.sort_values("weight_pct", ascending=False).to_dict("records"):
             scope = _portfolio_scope(row)
             weight = row.get("weight_pct")
             if scope == "reference" and pd.notna(weight) and float(weight) >= 10.0:
                 reference_rows.append(f"{_holding_name(row)}: {float(weight):.1f}%")
-        lines.extend(["", "参考保有:"])
-        if reference_rows:
-            lines.extend(reference_rows[:4])
-            lines.append("ETF信号とは別枠でサイズ確認。")
-        else:
-            lines.append("10%以上の参考保有なし")
 
+    lines = [
+        f"ETF Rotation Weekly {date:%Y-%m-%d}",
+        "",
+        weekly_label,
+        weekly_text,
+        "",
+        "今週やったこと:",
+        "✅ 毎朝の信号を確認",
+        "✅ DEFENSE中は新規買いを抑制",
+        "❌ 飛びつき買い禁止",
+        "❌ ナンピン禁止",
+        "",
+        "週次サマリー:",
+        f"DEFENSE: {defense_days}日",
+        f"CHECK BUY: {buy_days}日",
+        f"CHECK SELL: {sell_days}日",
+        f"WAIT: {wait_days}日",
+        "",
+        "参考保有の注意:",
+    ]
+    if reference_rows:
+        lines.extend(reference_rows[:4])
+        lines.append("ETF信号とは別枠。買い増しは個別に確認。")
+    else:
+        lines.append("10%以上の参考保有なし")
     lines.extend(
         [
             "",
             "来週の方針:",
-            "毎朝の信号に従い、DEFENSE中は新規買い禁止。",
+            "DEFENSE中は新規買い禁止。",
             "買い候補は必ず手動確認。",
+            "コア積立は通常ルール優先。",
             "",
             "※これは投資助言ではありません。最終判断はご自身で行ってください。",
         ]

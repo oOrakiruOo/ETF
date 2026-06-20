@@ -291,11 +291,17 @@ def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> 
     )
     text = output_path.read_text(encoding="utf-8")
     assert "ETF Rotation Weekly 2026-06-21" in text
+    assert "🔴 DEFENSE" in text
     assert "DEFENSE: 4日" in text
-    assert "評価: 買い急ぎを抑える週" in text
+    assert "買い急ぎを抑える週でした。" in text
+    assert "今週やったこと:" in text
+    assert "❌ 飛びつき買い禁止" in text
+    assert "週次サマリー:" in text
+    assert "参考保有の注意:" in text
     assert "SOFI: 12.0%" in text
-    assert "ETF信号とは別枠でサイズ確認。" in text
+    assert "ETF信号とは別枠。買い増しは個別に確認。" in text
     assert "DEFENSE中は新規買い禁止。" in text
+    assert "コア積立は通常ルール優先。" in text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:
