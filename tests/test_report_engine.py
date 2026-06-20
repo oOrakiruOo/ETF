@@ -176,9 +176,9 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
     assert "利確/売却確認: あり" in text
-    assert "次の買い候補:" in text
-    assert "VT  条件まで中距離" in text
-    assert "買い条件まで" in text
+    assert "監視候補:" in text
+    assert "VT  買い条件まで中距離" in text
+    assert "買いシグナル発生まで" in text
     assert "中距離（目安3〜12日）" in text
     assert "VT/VTI/SPY/QQQは待ち。" in text
     assert "テーマETFの新規買い候補なし。" in text

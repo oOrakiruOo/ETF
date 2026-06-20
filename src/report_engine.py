@@ -418,17 +418,17 @@ def write_decision_brief(
         f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
         f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
-        "次の買い候補:",
+        "監視候補:",
     ]
     if watch_candidates.empty:
         lines.append("なし")
     else:
         for row in watch_candidates.to_dict("records"):
-            lines.append(f"{_mobile_value(row.get('ETF'))}  条件まで{_buy_distance_label(row)}")
+            lines.append(f"{_mobile_value(row.get('ETF'))}  買い条件まで{_buy_distance_label(row)}")
     lines.extend(
         [
             "",
-            "買い条件まで",
+            "買いシグナル発生まで",
             distance_text,
             "",
         ]
