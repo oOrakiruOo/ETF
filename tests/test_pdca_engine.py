@@ -12,6 +12,7 @@ from src.pdca_engine import (
     run_entry_parameter_search,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
+    summarize_action_label_history,
     summarize_manual_decisions,
     summarize_signal_accuracy,
     summarize_virtual_trades,
@@ -36,6 +37,49 @@ def test_summarize_signal_accuracy_groups_by_signal() -> None:
     )
     summary = summarize_signal_accuracy(evaluated)
     assert set(summary["判定"]) == {"見送り", "買い候補"}
+
+
+def test_summarize_action_label_history_groups_snapshots_by_product_label() -> None:
+    signal_history = pd.DataFrame(
+        [
+            *[
+                {
+                    "snapshot": "2026-01-01",
+                    "ETF": f"RISK{i}",
+                    "判定": "売却候補",
+                    "テーマリスク": "高",
+                    "ステージ": "ステージ5: 失速期",
+                }
+                for i in range(10)
+            ],
+            {"snapshot": "2026-01-02", "ETF": "SMH", "判定": "売却候補", "テーマリスク": "低", "ステージ": "ステージ3: 加速期"},
+            {"snapshot": "2026-01-03", "ETF": "VGT", "判定": "買い候補", "テーマリスク": "低", "ステージ": "ステージ3: 加速期"},
+            {"snapshot": "2026-01-04", "ETF": "VT", "判定": "見送り", "テーマリスク": "低", "ステージ": "ステージ3: 加速期"},
+        ]
+    )
+    evaluated = pd.DataFrame(
+        [
+            {"snapshot": "2026-01-01", "ETF": "QQQ", "判定": "見送り", "20d_return_pct": -2.0},
+            {"snapshot": "2026-01-02", "ETF": "SMH", "判定": "売却候補", "20d_return_pct": -1.0},
+            {"snapshot": "2026-01-03", "ETF": "VGT", "判定": "買い候補", "20d_return_pct": 4.0},
+            {"snapshot": "2026-01-04", "ETF": "VT", "判定": "見送り", "20d_return_pct": 1.0},
+        ]
+    )
+    avoid = pd.DataFrame(
+        [
+            {"snapshot": "2026-01-01", "ETF": "QQQ", "判定": "見送り", "20d_return_pct": -2.0, "is_correct": True},
+            {"snapshot": "2026-01-02", "ETF": "SMH", "判定": "売却候補", "20d_return_pct": -1.0, "is_correct": True},
+        ]
+    )
+    summary = summarize_action_label_history(signal_history, evaluated, avoid)
+
+    labels = dict(zip(summary["行動ラベル"], summary["日数"], strict=False))
+    assert labels["🔴 DEFENSE"] == 1
+    assert labels["🟣 CHECK SELL"] == 1
+    assert labels["🟢 CHECK BUY"] == 1
+    assert labels["🟡 WAIT"] == 1
+    defense = summary[summary["行動ラベル"].eq("🔴 DEFENSE")].iloc[0]
+    assert defense["回避正解率%"] == 100.0
 
 
 def test_propose_signal_improvements_flags_weak_buy_signals() -> None:

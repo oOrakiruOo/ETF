@@ -359,8 +359,7 @@ def write_decision_brief(
         defense = readiness["状態"].eq("Block").any()
     data_stale_reason = _readiness_reason(readiness, "データ鮮度")
     data_stale = bool(data_stale_reason) and "当日分" not in data_stale_reason
-    if not signal_table.empty:
-        defense = defense or signal_table["テーマリスク"].astype(str).eq("高").any()
+    defense = defense or market_score <= 35
 
     has_buy = not core_buy.empty or not satellite_buy.empty
     has_sell_check = not risk_review.empty
@@ -966,6 +965,7 @@ def write_replay_pdca_report(
     hybrid_attribution_2024: pd.DataFrame | None = None,
     trade_plan_multipliers: dict[str, float] | None = None,
     avoid_policy_name: str = "current_all_avoid",
+    action_label_history: pd.DataFrame | None = None,
     output_dir: str | Path = "reports/weekly",
     processed_output_dir: str | Path | None = None,
     report_date: datetime | None = None,
@@ -999,6 +999,7 @@ def write_replay_pdca_report(
     relaxed_theme_risk_blocks_path = processed_dir / f"relaxed_theme_risk_overlay_blocks_{date:%Y-%m-%d}.csv"
     hybrid_trade_log_path = processed_dir / f"hybrid_trade_log_{date:%Y-%m-%d}.csv"
     hybrid_attribution_2024_path = processed_dir / f"hybrid_attribution_2024_{date:%Y-%m-%d}.csv"
+    action_label_history_path = processed_dir / f"action_label_history_{date:%Y-%m-%d}.csv"
     signal_history.to_csv(signal_path, index=False)
     signal_accuracy.to_csv(forward_path, index=False)
     virtual_trades.to_csv(virtual_path, index=False)
@@ -1045,6 +1046,8 @@ def write_replay_pdca_report(
         hybrid_trade_log.to_csv(hybrid_trade_log_path, index=False)
     if hybrid_attribution_2024 is not None:
         hybrid_attribution_2024.to_csv(hybrid_attribution_2024_path, index=False)
+    if action_label_history is not None:
+        action_label_history.to_csv(action_label_history_path, index=False)
 
     trade_plan_settings = trade_plan_multipliers or {
         "entry_multiplier": 1.0,
@@ -1235,6 +1238,11 @@ def write_replay_pdca_report(
         "## フォワードリターン評価",
         signal_accuracy.to_markdown(index=False) if not signal_accuracy.empty else "評価なし",
         "",
+        "## LINE行動ラベル別の過去検証",
+        action_label_history.to_markdown(index=False)
+        if action_label_history is not None and not action_label_history.empty
+        else "評価なし",
+        "",
         "## 仮想売買サマリー",
         virtual_trade_summary.to_markdown(index=False) if not virtual_trade_summary.empty else "評価なし",
         "",
@@ -1354,6 +1362,7 @@ def write_replay_pdca_report(
         f"- 緩和条件テーマリスク抑制ブロック監査CSV: `{relaxed_theme_risk_blocks_path}`",
         f"- ハイブリッド取引ログCSV: `{hybrid_trade_log_path}`",
         f"- ハイブリッド2024 ETF別要因CSV: `{hybrid_attribution_2024_path}`",
+        f"- LINE行動ラベル別検証CSV: `{action_label_history_path}`",
     ]
     output_path.write_text("\n".join(content), encoding="utf-8")
     return output_path

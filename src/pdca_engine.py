@@ -37,6 +37,32 @@ AVOID_POLICY_SIGNALS = {
     "no_sell_candidate_avoid": {"見送り", "リスク削減"},
 }
 
+ACTION_LABEL_ORDER = ["🔴 DEFENSE", "🟣 CHECK SELL", "🟢 CHECK BUY", "🟡 WAIT"]
+
+
+def _numeric_series(table: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
+    if table.empty or column not in table.columns:
+        return pd.Series(dtype="float64")
+    return pd.to_numeric(table[column], errors="coerce").fillna(default)
+
+
+def _product_market_score(snapshot_rows: pd.DataFrame) -> int:
+    if snapshot_rows.empty:
+        return 0
+    signals = snapshot_rows["判定"].astype(str) if "判定" in snapshot_rows.columns else pd.Series(dtype=str)
+    stages = snapshot_rows["ステージ"].astype(str) if "ステージ" in snapshot_rows.columns else pd.Series(dtype=str)
+    risks = snapshot_rows["テーマリスク"].astype(str) if "テーマリスク" in snapshot_rows.columns else pd.Series(dtype=str)
+    score = 75.0
+    score += min(float(signals.isin(["強気買い候補", "買い候補"]).sum()) * 10, 20)
+    score += min(float(signals.eq("押し目待ち").sum()) * 4, 12)
+    score -= min(float(signals.isin(["利確候補", "売却候補", "リスク削減"]).sum()) * 3, 18)
+    score -= min(float(stages.str.contains("ステージ4|ステージ5", na=False).sum()) * 2, 18)
+    score -= min(float(risks.eq("高").sum()) * 3, 12)
+    rr = _numeric_series(snapshot_rows, "RR")
+    if not rr.empty:
+        score += min(float((rr >= 1.5).sum()) * 2, 8)
+    return int(round(max(0.0, min(score, 100.0))))
+
 
 def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
     if manual_decisions.empty:
@@ -470,6 +496,80 @@ def summarize_signal_accuracy(evaluated: pd.DataFrame) -> pd.DataFrame:
             valid = group[column].dropna()
             row[f"{column}_平均"] = round(float(valid.mean()), 2) if not valid.empty else None
             row[f"{column}_勝率"] = round(float((valid > 0).mean() * 100), 2) if not valid.empty else None
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _action_label_for_snapshot(snapshot_rows: pd.DataFrame) -> str:
+    if snapshot_rows.empty:
+        return "🟡 WAIT"
+    signals = snapshot_rows["判定"].astype(str) if "判定" in snapshot_rows.columns else pd.Series(dtype=str)
+    if _product_market_score(snapshot_rows) <= 35:
+        return "🔴 DEFENSE"
+    if signals.isin(["利確候補", "売却候補", "リスク削減"]).any():
+        return "🟣 CHECK SELL"
+    if signals.isin(["強気買い候補", "買い候補"]).any():
+        return "🟢 CHECK BUY"
+    return "🟡 WAIT"
+
+
+def build_action_label_by_snapshot(signal_history: pd.DataFrame) -> pd.DataFrame:
+    if signal_history.empty or "snapshot" not in signal_history.columns:
+        return pd.DataFrame(columns=["snapshot", "行動ラベル"])
+    rows = [
+        {"snapshot": snapshot, "行動ラベル": _action_label_for_snapshot(group)}
+        for snapshot, group in signal_history.groupby("snapshot")
+    ]
+    return pd.DataFrame(rows)
+
+
+def _action_label_interpretation(label: str, avoid_rate: object, return_20d: object) -> str:
+    if label == "🔴 DEFENSE":
+        if pd.notna(avoid_rate) and float(avoid_rate) >= 55:
+            return "新規買い抑制が機能しやすい局面"
+        return "新規買いを抑え、データと保有確認を優先"
+    if label == "🟣 CHECK SELL":
+        return "新規買いより保有ETFの利確/売却確認を優先"
+    if label == "🟢 CHECK BUY":
+        if pd.notna(return_20d) and float(return_20d) > 0:
+            return "買い候補の手動確認に値する局面"
+        return "買い候補はあるが、条件とサイズを手動確認"
+    return "何もしないことが基本方針"
+
+
+def summarize_action_label_history(
+    signal_history: pd.DataFrame,
+    evaluated_signals: pd.DataFrame,
+    avoid_outcomes: pd.DataFrame,
+) -> pd.DataFrame:
+    labels = build_action_label_by_snapshot(signal_history)
+    if labels.empty:
+        return pd.DataFrame()
+    evaluated = evaluated_signals.merge(labels, on="snapshot", how="left") if not evaluated_signals.empty else pd.DataFrame()
+    avoided = avoid_outcomes.merge(labels, on="snapshot", how="left") if not avoid_outcomes.empty else pd.DataFrame()
+    rows: list[dict[str, object]] = []
+    for label in ACTION_LABEL_ORDER:
+        label_days = labels[labels["行動ラベル"].eq(label)]
+        evaluated_group = evaluated[evaluated["行動ラベル"].eq(label)] if not evaluated.empty else pd.DataFrame()
+        avoid_group = avoided[avoided["行動ラベル"].eq(label)] if not avoided.empty else pd.DataFrame()
+        row: dict[str, object] = {
+            "行動ラベル": label,
+            "日数": int(label_days["snapshot"].nunique()) if not label_days.empty else 0,
+            "ETF件数": len(evaluated_group),
+        }
+        for days in [1, 5, 20]:
+            column = f"{days}d_return_pct"
+            values = pd.to_numeric(evaluated_group.get(column, pd.Series(dtype=float)), errors="coerce").dropna()
+            row[f"{days}日後平均%"] = round(float(values.mean()), 2) if not values.empty else None
+            row[f"{days}日後勝率%"] = round(float((values > 0).mean() * 100), 2) if not values.empty else None
+        evaluated_avoid = avoid_group.dropna(subset=["is_correct"]) if not avoid_group.empty else pd.DataFrame()
+        row["回避評価件数"] = len(evaluated_avoid)
+        row["回避正解率%"] = (
+            round(float(evaluated_avoid["is_correct"].astype(bool).mean() * 100), 2)
+            if not evaluated_avoid.empty
+            else None
+        )
+        row["解釈"] = _action_label_interpretation(label, row["回避正解率%"], row["20日後平均%"])
         rows.append(row)
     return pd.DataFrame(rows)
 

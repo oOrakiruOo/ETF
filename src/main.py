@@ -60,6 +60,7 @@ from .pdca_engine import (
     run_avoid_policy_search,
     summarize_avoid_outcomes_by_signal,
     summarize_avoid_outcomes,
+    summarize_action_label_history,
     summarize_manual_decisions,
     summarize_signal_accuracy,
     summarize_virtual_trades,
@@ -1192,6 +1193,7 @@ def run_replay(refresh: bool = False) -> None:
     all_avoid_outcomes = evaluate_avoid_outcomes(signal_history)
     avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
+    action_label_history = summarize_action_label_history(signal_history, evaluated_signals, avoid_outcomes)
     entry_parameter_results = run_entry_parameter_search(signal_history)
     avoid_by_signal = summarize_avoid_outcomes_by_signal(avoid_outcomes)
     avoid_policy_results = run_avoid_policy_search(all_avoid_outcomes)
@@ -1350,6 +1352,7 @@ def run_replay(refresh: bool = False) -> None:
         hybrid_attribution_2024,
         trade_plan_multipliers,
         avoid_policy_name,
+        action_label_history,
     )
     logger.info("Replay PDCA report written: %s", output_path)
     print(f"履歴再生PDCAレポートを作成しました: {output_path}")
@@ -1433,6 +1436,7 @@ def run_replay_quick(refresh: bool = False) -> None:
     all_avoid_outcomes = evaluate_avoid_outcomes(signal_history)
     avoid_outcomes = evaluate_avoid_outcomes_for_signals(signal_history, avoid_signals)
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
+    action_label_history = summarize_action_label_history(signal_history, evaluated_signals, avoid_outcomes)
     entry_parameter_results = run_entry_parameter_search(signal_history)
     avoid_by_signal = summarize_avoid_outcomes_by_signal(avoid_outcomes)
     avoid_policy_results = run_avoid_policy_search(all_avoid_outcomes)
@@ -1466,6 +1470,7 @@ def run_replay_quick(refresh: bool = False) -> None:
         None,
         trade_plan_multipliers,
         avoid_policy_name,
+        action_label_history,
     )
     logger.info("Quick replay PDCA report written: %s", output_path)
     print(f"軽量履歴再生PDCAレポートを作成しました: {output_path}")
