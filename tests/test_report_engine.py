@@ -163,6 +163,15 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
             [
                 {"ticker": "ORCAN", "market_value": 1800000, "weight_pct": 18.0, "asset_class": "fund", "signal_scope": "core"},
                 {"ticker": "QQQ", "market_value": 120000, "weight_pct": 1.2, "asset_class": "etf", "signal_scope": "etf_signal"},
+                {
+                    "ticker": "SOFI",
+                    "market_value": 1100000,
+                    "weight_pct": 11.0,
+                    "asset_class": "stock",
+                    "signal_scope": "reference",
+                    "portfolio_action": "保有継続",
+                    "portfolio_reason": "通常監視",
+                },
             ]
         ),
         output_dir=tmp_path,
@@ -183,11 +192,15 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "サテライト買い: 待ち" in text
     assert "利確/売却確認: あり" in text
     assert "保有サマリー:" in text
-    assert "評価額合計: 1,920,000円" in text
+    assert "評価額合計: 3,020,000円" in text
     assert "ORCAN: 18.0%" in text
     assert "保有の扱い:" in text
     assert "QQQ: ETF信号対象" in text
     assert "ORCAN: コア資産" in text
+    assert "SOFI: ETF信号の参考外" in text
+    assert "参考保有の注意:" in text
+    assert "SOFI: 11.0% / 保有継続 / 通常監視" in text
+    assert "ETF信号とは別枠。買い増しは個別に確認。" in text
     assert "監視候補:" in text
     assert "VT  買い条件まで中距離" in text
     assert "買いシグナル発生まで" in text

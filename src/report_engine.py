@@ -446,6 +446,7 @@ def write_decision_brief(
     portfolio_summary_lines: list[str] = []
     portfolio_signal_lines: list[str] = []
     portfolio_reference_lines: list[str] = []
+    reference_alert_lines: list[str] = []
     if portfolio is not None and not portfolio.empty:
         portfolio_frame = portfolio.copy()
         if "market_value" in portfolio_frame.columns:
@@ -468,6 +469,10 @@ def write_decision_brief(
                     portfolio_reference_lines.append(f"{ticker}: コア資産")
                 else:
                     portfolio_reference_lines.append(f"{ticker}: ETF信号の参考外")
+                    if float(weight) >= 10.0:
+                        portfolio_action = _mobile_value(row.get("portfolio_action"))
+                        portfolio_reason = _mobile_value(row.get("portfolio_reason"))
+                        reference_alert_lines.append(f"{ticker}: {float(weight):.1f}% / {portfolio_action} / {portfolio_reason}")
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -508,6 +513,15 @@ def write_decision_brief(
         if portfolio_reference_lines:
             lines.extend(portfolio_reference_lines[:4])
         lines.append("")
+    if reference_alert_lines:
+        lines.extend(
+            [
+                "参考保有の注意:",
+                *reference_alert_lines[:4],
+                "ETF信号とは別枠。買い増しは個別に確認。",
+                "",
+            ]
+        )
     lines.extend([
         "監視候補:",
     ])
