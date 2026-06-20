@@ -262,9 +262,49 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "最新シグナルは2026-06-18（2日前）" in text
     assert "この通知は新規売買判断に使わないでください。" in text
     assert "🔴 DEFENSE" in text
+    assert "危険だから買わない。資金を守る日。" in text
     assert "DEFENSE継続:" in text
     assert "2日" in text
     assert "解除条件:" in text
+
+
+def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "QQQ",
+                "テーマ": "Core",
+                "ETFスコア": 68.0,
+                "テーマスコア": 64.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ3: 加速期",
+                "現在価格": 100.0,
+                "第1買い": 96.0,
+                "第1買いまで%": -4.0,
+                "第2買い": 94.0,
+                "第3買い": 90.0,
+                "保守目標": 110.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 1.1,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            }
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 19),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "🟡 WAIT" in text
+    assert "危険ではないが条件未達。買い場を待つ日。" in text
+    assert "❌ 新規買いは見送り" in text
 
 
 def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> None:

@@ -494,6 +494,16 @@ def _holding_name(row: dict[str, object]) -> str:
     return fallback_names.get(ticker, _mobile_value(row.get("ticker")))
 
 
+def _action_label_meaning(action_label: str) -> str:
+    meanings = {
+        "🔴 DEFENSE": "危険だから買わない。資金を守る日。",
+        "🟡 WAIT": "危険ではないが条件未達。買い場を待つ日。",
+        "🟢 CHECK BUY": "候補あり。価格と保有比率を手動確認する日。",
+        "🟣 CHECK SELL": "新規買いより保有の利確/売却確認を優先する日。",
+    }
+    return meanings.get(action_label, "自己判断のために確認する日。")
+
+
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -645,6 +655,7 @@ def write_decision_brief(
         "",
         action_label,
         action_text,
+        _action_label_meaning(action_label),
         "",
     ])
     if defense and defense_streak_days is not None:
