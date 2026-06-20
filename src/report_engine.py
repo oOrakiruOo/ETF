@@ -566,6 +566,7 @@ def write_decision_brief(
     sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
     held_sell_names = held_risk_review["ETF"].astype(str).head(3).tolist() if not held_risk_review.empty else []
     today_actions = []
+    mistake_guard_lines = ["上がっても飛びつかない。", "下がってもナンピンしない。"]
     if defense:
         today_actions.append("✅ 積立だけ通常ルールで継続")
         if held_sell_names:
@@ -587,6 +588,7 @@ def write_decision_brief(
     elif has_buy:
         today_actions.append(f"✅ 買い候補を手動確認: {', '.join(buy_names)}")
         today_actions.append("❌ 成行飛びつき禁止")
+        mistake_guard_lines[0] = "買う場合も成行で飛びつかない。"
     else:
         today_actions.append("✅ 積立だけ通常ルールで継続")
         today_actions.append("❌ 新規買いは見送り")
@@ -629,6 +631,8 @@ def write_decision_brief(
             reference_top = max(all_reference_rows, key=lambda row: float(row.get("weight_pct") or 0.0))
             reference_top_name = _holding_name(reference_top)
             reference_top_weight = float(reference_top.get("weight_pct") or 0.0)
+            if reference_total_weight >= 20.0 or reference_top_weight >= 10.0:
+                mistake_guard_lines.append("参考保有はETF通知で買い増ししない。")
         top_holdings = portfolio_frame.sort_values("weight_pct", ascending=False).head(5)
         for row in top_holdings.to_dict("records"):
             holding_name = _holding_name(row)
@@ -684,6 +688,9 @@ def write_decision_brief(
     lines.extend([
         "今日やること:",
         *today_actions,
+        "",
+        "ルール破り防止:",
+        *mistake_guard_lines,
         "",
         "買い判断:",
         f"新規買い: {'あり' if has_buy else 'なし'}",

@@ -196,6 +196,9 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "✅ 市場リスク対象を確認: SMH" in text
     assert "❌ 新規買いは見送り" in text
     assert "❌ ナンピン禁止" in text
+    assert "ルール破り防止:" in text
+    assert "上がっても飛びつかない。" in text
+    assert "下がってもナンピンしない。" in text
     assert "新規買い: なし" in text
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
@@ -212,6 +215,7 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "最大: SOFI 11.0%" in text
     assert "SOFI: 11.0% / 保有継続 / 通常監視" in text
     assert "ETF信号とは別枠。買い増しはETF通知で判断しない。" in text
+    assert "参考保有はETF通知で買い増ししない。" in text
     assert "次の買い候補:" in text
     assert "VT  買い条件まで中距離 / あと2.0%" in text
     assert "買いシグナル発生まで" in text
