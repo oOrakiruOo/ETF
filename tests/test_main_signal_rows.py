@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import pandas as pd
 
 from src.main import (
+    _data_freshness_gate,
     apply_relaxed_theme_entry_policy,
     apply_theme_risk_overlay_to_signal_history,
     avoid_policy_name_from_settings,
@@ -50,6 +53,14 @@ def test_build_signal_rows_includes_theme_rotation_risk_columns() -> None:
 def test_trade_plan_multipliers_from_settings_uses_defaults() -> None:
     result = trade_plan_multipliers_from_settings({})
     assert result == {"entry_multiplier": 1.0, "stop_multiplier": 1.0, "target_multiplier": 1.0}
+
+
+def test_data_freshness_gate_blocks_stale_signals() -> None:
+    gate = _data_freshness_gate(datetime(2026, 6, 18), today=datetime(2026, 6, 20))
+
+    assert gate["判定項目"] == "データ鮮度"
+    assert gate["状態"] == "Block"
+    assert "2日前" in gate["理由"]
 
 
 def test_run_daily_operations_calls_operational_steps(monkeypatch) -> None:

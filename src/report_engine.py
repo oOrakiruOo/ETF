@@ -311,6 +311,15 @@ def _watch_candidates(signal_table: pd.DataFrame, limit: int = 3) -> pd.DataFram
     )
 
 
+def _readiness_reason(readiness: pd.DataFrame | None, item: str) -> str:
+    if readiness is None or readiness.empty:
+        return ""
+    rows = readiness[readiness["判定項目"].astype(str).eq(item)]
+    if rows.empty:
+        return ""
+    return _mobile_value(rows.iloc[0].get("理由"))
+
+
 def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) -> pd.DataFrame:
     if signal_table.empty:
         return signal_table
@@ -348,6 +357,8 @@ def write_decision_brief(
     defense = False
     if readiness is not None and not readiness.empty:
         defense = readiness["状態"].eq("Block").any()
+    data_stale_reason = _readiness_reason(readiness, "データ鮮度")
+    data_stale = bool(data_stale_reason) and "当日分" not in data_stale_reason
     if not signal_table.empty:
         defense = defense or signal_table["テーマリスク"].astype(str).eq("高").any()
 
@@ -399,10 +410,23 @@ def write_decision_brief(
         reason_lines.append("新規買いより保有確認を優先")
     if defense:
         reason_lines.append("リスク確認を優先")
+    if data_stale:
+        reason_lines.append("データ鮮度に問題あり")
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
         "",
+    ]
+    if data_stale:
+        lines.extend(
+            [
+                "⚠️ DATA STALE",
+                data_stale_reason,
+                "この通知は新規売買判断に使わないでください。",
+                "",
+            ]
+        )
+    lines.extend([
         "市場スコア",
         f"{market_score}/100",
         "",
@@ -419,7 +443,7 @@ def write_decision_brief(
         f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
         "監視候補:",
-    ]
+    ])
     if watch_candidates.empty:
         lines.append("なし")
     else:

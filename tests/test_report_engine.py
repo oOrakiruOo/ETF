@@ -188,6 +188,47 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "※これは投資助言ではありません。" in text
 
 
+def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "QQQ",
+                "テーマ": "Core",
+                "ETFスコア": 70.0,
+                "テーマスコア": 65.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ3: 加速期",
+                "現在価格": 100.0,
+                "第1買い": 98.0,
+                "第1買いまで%": -2.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 110.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 1.2,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            }
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame(
+            [{"判定項目": "データ鮮度", "状態": "Block", "理由": "最新シグナルは2026-06-18（2日前）"}]
+        ),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 18),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "⚠️ DATA STALE" in text
+    assert "最新シグナルは2026-06-18（2日前）" in text
+    assert "この通知は新規売買判断に使わないでください。" in text
+    assert "🔴 DEFENSE" in text
+
+
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:
     hybrid_grid = pd.DataFrame(
         [

@@ -991,10 +991,29 @@ def _write_latest_mobile_summary() -> str:
     return str(output_path)
 
 
+def _data_freshness_gate(report_date: datetime, today: datetime | None = None) -> dict[str, str]:
+    current_date = (today or datetime.now()).date()
+    age_days = (current_date - report_date.date()).days
+    if age_days < 0:
+        return {
+            "判定項目": "データ鮮度",
+            "状態": "Block",
+            "理由": f"シグナル日付が未来です: {report_date:%Y-%m-%d}",
+        }
+    if age_days > 0:
+        return {
+            "判定項目": "データ鮮度",
+            "状態": "Block",
+            "理由": f"最新シグナルは{report_date:%Y-%m-%d}（{age_days}日前）",
+        }
+    return {"判定項目": "データ鮮度", "状態": "OK", "理由": f"最新シグナルは当日分: {report_date:%Y-%m-%d}"}
+
+
 def _load_latest_signal_context() -> tuple[datetime, pd.DataFrame, pd.DataFrame]:
     report_date, signals_path = _latest_signals_path()
     signal_table = pd.read_csv(signals_path)
     readiness = check_go_live_readiness(report_date)
+    readiness = pd.concat([readiness, pd.DataFrame([_data_freshness_gate(report_date)])], ignore_index=True)
     return report_date, signal_table, readiness
 
 
