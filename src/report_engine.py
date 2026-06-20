@@ -194,6 +194,75 @@ def write_mobile_summary(
     return output_path
 
 
+def write_weekly_line_summary(
+    action_label_history: pd.DataFrame | None = None,
+    portfolio: pd.DataFrame | None = None,
+    output_dir: str | Path = "reports/weekly",
+    report_date: datetime | None = None,
+) -> Path:
+    date = report_date or datetime.now()
+    directory = ensure_dir(output_dir)
+    output_path = PROJECT_ROOT / directory / f"weekly_line_summary_{date:%Y-%m-%d}.txt"
+    lines = [
+        f"ETF Rotation Weekly {date:%Y-%m-%d}",
+        "",
+        "今週の確認:",
+    ]
+    if action_label_history is not None and not action_label_history.empty:
+        labels = action_label_history.copy()
+        labels["日数"] = pd.to_numeric(labels["日数"], errors="coerce").fillna(0)
+        label_days = dict(zip(labels["行動ラベル"].astype(str), labels["日数"].astype(int), strict=False))
+        defense_days = int(label_days.get("🔴 DEFENSE", 0))
+        buy_days = int(label_days.get("🟢 CHECK BUY", 0))
+        wait_days = int(label_days.get("🟡 WAIT", 0))
+        sell_days = int(label_days.get("🟣 CHECK SELL", 0))
+        lines.extend(
+            [
+                f"DEFENSE: {defense_days}日",
+                f"CHECK BUY: {buy_days}日",
+                f"CHECK SELL: {sell_days}日",
+                f"WAIT: {wait_days}日",
+            ]
+        )
+        if defense_days > buy_days:
+            lines.append("評価: 買い急ぎを抑える週")
+        elif buy_days:
+            lines.append("評価: 買い候補を手動確認する週")
+        else:
+            lines.append("評価: 待機中心")
+    else:
+        lines.append("行動ラベル検証なし")
+
+    if portfolio is not None and not portfolio.empty:
+        frame = portfolio.copy()
+        frame["weight_pct"] = pd.to_numeric(frame.get("weight_pct", pd.Series(dtype=float)), errors="coerce")
+        reference_rows = []
+        for row in frame.sort_values("weight_pct", ascending=False).to_dict("records"):
+            scope = _portfolio_scope(row)
+            weight = row.get("weight_pct")
+            if scope == "reference" and pd.notna(weight) and float(weight) >= 10.0:
+                reference_rows.append(f"{_mobile_value(row.get('ticker'))}: {float(weight):.1f}%")
+        lines.extend(["", "参考保有:"])
+        if reference_rows:
+            lines.extend(reference_rows[:4])
+            lines.append("ETF信号とは別枠でサイズ確認。")
+        else:
+            lines.append("10%以上の参考保有なし")
+
+    lines.extend(
+        [
+            "",
+            "来週の方針:",
+            "毎朝の信号に従い、DEFENSE中は新規買い禁止。",
+            "買い候補は必ず手動確認。",
+            "",
+            "※これは投資助言ではありません。最終判断はご自身で行ってください。",
+        ]
+    )
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path
+
+
 def _format_signal_row(row: dict[str, object]) -> str:
     return (
         f"{_mobile_value(row.get('ETF'))}: {_mobile_value(row.get('判定'))} "

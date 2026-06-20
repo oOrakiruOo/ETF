@@ -17,6 +17,7 @@ from src.report_engine import (
     write_portfolio_check_report,
     write_replay_pdca_report,
     write_weekly_health_report,
+    write_weekly_line_summary,
     write_weekly_pdca_report,
 )
 
@@ -252,6 +253,36 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "最新シグナルは2026-06-18（2日前）" in text
     assert "この通知は新規売買判断に使わないでください。" in text
     assert "🔴 DEFENSE" in text
+
+
+def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> None:
+    action_label_history = pd.DataFrame(
+        [
+            {"行動ラベル": "🔴 DEFENSE", "日数": 4},
+            {"行動ラベル": "🟢 CHECK BUY", "日数": 1},
+            {"行動ラベル": "🟣 CHECK SELL", "日数": 1},
+            {"行動ラベル": "🟡 WAIT", "日数": 0},
+        ]
+    )
+    portfolio = pd.DataFrame(
+        [
+            {"ticker": "SOFI", "weight_pct": 12.0, "asset_class": "stock", "signal_scope": "reference"},
+            {"ticker": "QQQ", "weight_pct": 2.0, "asset_class": "etf", "signal_scope": "etf_signal"},
+        ]
+    )
+    output_path = write_weekly_line_summary(
+        action_label_history=action_label_history,
+        portfolio=portfolio,
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 21),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "ETF Rotation Weekly 2026-06-21" in text
+    assert "DEFENSE: 4日" in text
+    assert "評価: 買い急ぎを抑える週" in text
+    assert "SOFI: 12.0%" in text
+    assert "ETF信号とは別枠でサイズ確認。" in text
+    assert "DEFENSE中は新規買い禁止。" in text
 
 
 def test_replay_report_action_items_use_min_score_for_hybrid_thresholds(tmp_path) -> None:

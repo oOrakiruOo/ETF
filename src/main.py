@@ -51,6 +51,8 @@ from .operations_engine import (
 )
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
+    ACTION_LABEL_ORDER,
+    build_action_label_by_snapshot,
     evaluate_avoid_outcomes,
     evaluate_avoid_outcomes_for_signals,
     evaluate_signal_history,
@@ -86,6 +88,7 @@ from .report_engine import (
     write_selection_audit_report,
     write_signal_snapshot,
     write_weekly_health_report,
+    write_weekly_line_summary,
     write_weekly_pdca_report,
 )
 from .risk_engine import calculate_trade_plan
@@ -801,6 +804,13 @@ def latest_csv(pattern: str) -> pd.DataFrame:
     return pd.read_csv(paths[-1])
 
 
+def latest_processed_signals_csv(pattern: str) -> pd.DataFrame:
+    paths = sorted((PROJECT_ROOT / "data" / "processed" / "signals").glob(pattern))
+    if not paths:
+        return pd.DataFrame()
+    return pd.read_csv(paths[-1])
+
+
 def load_recent_signal_history(limit: int = 7) -> pd.DataFrame:
     paths = sorted((PROJECT_ROOT / "data" / "processed" / "signals").glob("signals_*.csv"))
     if not paths:
@@ -926,6 +936,39 @@ def run_weekly_health() -> None:
     output_path = write_weekly_health_report(health)
     logging.getLogger(__name__).info("Weekly health report written: %s", output_path)
     print(f"週次ヘルスチェックレポートを作成しました: {output_path}")
+
+
+def _write_weekly_line_summary() -> str:
+    recent_signals = load_recent_signal_history()
+    labels = build_action_label_by_snapshot(recent_signals)
+    action_label_history = (
+        labels["行動ラベル"].value_counts().reindex(ACTION_LABEL_ORDER, fill_value=0).reset_index()
+        if not labels.empty
+        else pd.DataFrame()
+    )
+    if not action_label_history.empty:
+        action_label_history.columns = ["行動ラベル", "日数"]
+    portfolio = load_portfolio()
+    if not portfolio.empty:
+        portfolio = evaluate_portfolio_actions(update_portfolio_prices(portfolio, {}))
+    output_path = write_weekly_line_summary(action_label_history=action_label_history, portfolio=portfolio)
+    return str(output_path)
+
+
+def run_weekly_line_summary() -> None:
+    setup_logging()
+    output_path = _write_weekly_line_summary()
+    logging.getLogger(__name__).info("Weekly LINE summary written: %s", output_path)
+    print(f"週次LINE要約を作成しました: {output_path}")
+
+
+def run_line_broadcast_weekly_summary() -> None:
+    setup_logging()
+    output_path = _write_weekly_line_summary()
+    text = Path(output_path).read_text(encoding="utf-8")
+    status = send_line_broadcast_message(text)
+    logging.getLogger(__name__).info("LINE broadcast weekly summary sent: %s status=%s", output_path, status)
+    print(f"LINEへ週次要約をブロードキャスト送信しました: {output_path}")
 
 
 def run_operations_status() -> None:
@@ -1492,6 +1535,7 @@ def main() -> None:
             "validate",
             "audit",
             "weekly",
+            "weekly-line-summary",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1510,6 +1554,7 @@ def main() -> None:
             "line-broadcast-summary",
             "line-decision-brief",
             "line-broadcast-decision-brief",
+            "line-broadcast-weekly-summary",
             "replay",
             "replay-quick",
         ],
@@ -1528,6 +1573,8 @@ def main() -> None:
         run_replay_quick(refresh=args.refresh)
     elif args.command == "weekly":
         run_weekly()
+    elif args.command == "weekly-line-summary":
+        run_weekly_line_summary()
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":
@@ -1564,6 +1611,8 @@ def main() -> None:
         run_line_decision_brief()
     elif args.command == "line-broadcast-decision-brief":
         run_line_broadcast_decision_brief()
+    elif args.command == "line-broadcast-weekly-summary":
+        run_line_broadcast_weekly_summary()
     elif args.command == "audit":
         run_audit(refresh=args.refresh, profile_name=args.profile)
     elif args.command == "validate":
