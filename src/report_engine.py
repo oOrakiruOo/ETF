@@ -229,6 +229,88 @@ def _short_detail(row: dict[str, object]) -> str:
     )
 
 
+def _numeric_series(table: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
+    if table.empty or column not in table.columns:
+        return pd.Series(dtype="float64")
+    return pd.to_numeric(table[column], errors="coerce").fillna(default)
+
+
+def _market_score(signal_table: pd.DataFrame) -> int:
+    if signal_table.empty:
+        return 0
+    score = 75.0
+    buy_count = int(signal_table["判定"].isin(["強気買い候補", "買い候補"]).sum())
+    wait_count = int(signal_table["判定"].eq("押し目待ち").sum())
+    risk_count = int(signal_table["判定"].isin(["利確候補", "売却候補", "リスク削減"]).sum())
+    hot_late_count = int(signal_table["ステージ"].astype(str).str.contains("ステージ4|ステージ5", na=False).sum())
+    high_risk_count = int(signal_table["テーマリスク"].astype(str).eq("高").sum())
+    score += min(buy_count * 10, 20)
+    score += min(wait_count * 4, 12)
+    score -= min(risk_count * 3, 18)
+    score -= min(hot_late_count * 2, 18)
+    score -= min(high_risk_count * 3, 12)
+    rr = _numeric_series(signal_table, "RR")
+    if not rr.empty:
+        score += min(float((rr >= 1.5).sum()) * 2, 8)
+    return int(round(max(0.0, min(score, 100.0))))
+
+
+def _buy_distance_label(row: dict[str, object]) -> str:
+    signal = _mobile_value(row.get("判定"))
+    stage = _mobile_value(row.get("ステージ"))
+    risk = _mobile_value(row.get("テーマリスク"))
+    try:
+        gap = abs(float(row.get("第1買いまで%", 99.0)))
+    except (TypeError, ValueError):
+        gap = 99.0
+    try:
+        rr = float(row.get("RR", 0.0))
+    except (TypeError, ValueError):
+        rr = 0.0
+    if signal in {"強気買い候補", "買い候補"}:
+        return "条件到達"
+    if "ステージ5" in stage or risk == "高":
+        return "遠い"
+    if "ステージ4" in stage:
+        return "中距離" if gap <= 5 and rr >= 0.8 else "遠い"
+    if gap <= 2:
+        return "近い"
+    if gap <= 5:
+        return "中距離"
+    return "遠い"
+
+
+def _estimate_signal_distance(candidates: pd.DataFrame) -> str:
+    if candidates.empty:
+        return "未定"
+    labels = [_buy_distance_label(row) for row in candidates.to_dict("records")]
+    if "条件到達" in labels:
+        return "条件到達"
+    if "近い" in labels:
+        return "近い（目安1〜3日）"
+    if "中距離" in labels:
+        return "中距離（目安3〜12日）"
+    return "遠い（2週間以上または条件悪化）"
+
+
+def _watch_candidates(signal_table: pd.DataFrame, limit: int = 3) -> pd.DataFrame:
+    if signal_table.empty:
+        return signal_table
+    excluded = {"利確候補", "売却候補", "リスク削減"}
+    candidates = signal_table[~signal_table["判定"].isin(excluded)].copy()
+    if candidates.empty:
+        return candidates
+    candidates["_distance_rank"] = candidates.apply(
+        lambda row: {"条件到達": 0, "近い": 1, "中距離": 2, "遠い": 3}.get(_buy_distance_label(row.to_dict()), 4),
+        axis=1,
+    )
+    return (
+        candidates.sort_values(["_distance_rank", "ETFスコア", "テーマスコア"], ascending=[True, False, False])
+        .head(limit)
+        .drop(columns=["_distance_rank"])
+    )
+
+
 def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) -> pd.DataFrame:
     if signal_table.empty:
         return signal_table
@@ -260,6 +342,9 @@ def write_decision_brief(
     hot_or_late = signal_table[
         signal_table["ステージ"].astype(str).str.contains("ステージ4|ステージ5", na=False)
     ]
+    watch_candidates = _watch_candidates(signal_table)
+    market_score = _market_score(signal_table)
+    distance_text = _estimate_signal_distance(watch_candidates)
     defense = False
     if readiness is not None and not readiness.empty:
         defense = readiness["状態"].eq("Block").any()
@@ -283,15 +368,27 @@ def write_decision_brief(
 
     buy_names = pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist() if has_buy else []
     sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
-    summary_lines = []
-    if has_buy:
-        summary_lines.append(f"買い候補を手動確認: {', '.join(buy_names)}")
+    today_actions = []
+    if defense:
+        today_actions.append("✅ 積立だけ通常ルールで継続")
+        if has_sell_check:
+            today_actions.append(f"✅ {', '.join(sell_names)}の保有状況だけ確認")
+        elif has_buy:
+            today_actions.append(f"✅ 買い候補は少額/見送り前提で手動確認: {', '.join(buy_names)}")
+        today_actions.append("❌ 新規買い禁止")
+        today_actions.append("❌ ナンピン禁止")
+        today_actions.append("❌ 過熱・失速銘柄の追い買い禁止")
+    elif has_sell_check:
+        today_actions.append(f"✅ {', '.join(sell_names)}の保有状況だけ確認")
+        today_actions.append("❌ 新規買いは見送り")
+        today_actions.append("❌ ナンピン禁止")
+    elif has_buy:
+        today_actions.append(f"✅ 買い候補を手動確認: {', '.join(buy_names)}")
+        today_actions.append("❌ 成行飛びつき禁止")
     else:
-        summary_lines.append("新規買いは見送り。")
-    if has_sell_check:
-        summary_lines.append(f"{', '.join(sell_names)}の保有状況だけ確認。")
-    elif not has_buy:
-        summary_lines.append("今日は何もしないことが基本方針。")
+        today_actions.append("✅ 積立だけ通常ルールで継続")
+        today_actions.append("❌ 新規買いは見送り")
+        today_actions.append("❌ ナンピン禁止")
 
     reason_lines = []
     if not has_buy:
@@ -306,11 +403,14 @@ def write_decision_brief(
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
         "",
+        "市場スコア",
+        f"{market_score}/100",
+        "",
         action_label,
         action_text,
         "",
         "今日やること:",
-        *summary_lines,
+        *today_actions,
         "",
         "買い判断:",
         f"新規買い: {'あり' if has_buy else 'なし'}",
@@ -318,8 +418,24 @@ def write_decision_brief(
         f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
         f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
-        "コア:",
+        "次の買い候補:",
     ]
+    if watch_candidates.empty:
+        lines.append("なし")
+    else:
+        for row in watch_candidates.to_dict("records"):
+            lines.append(f"{_mobile_value(row.get('ETF'))}  条件まで{_buy_distance_label(row)}")
+    lines.extend(
+        [
+            "",
+            "買い条件まで",
+            distance_text,
+            "",
+        ]
+    )
+    lines.extend([
+        "コア:",
+    ])
     if core_buy.empty and core_wait.empty:
         lines.append("VT/VTI/SPY/QQQは待ち。")
         lines.append("積立は通常ルール優先。")

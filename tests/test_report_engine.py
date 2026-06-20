@@ -164,13 +164,22 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     )
     text = output_path.read_text(encoding="utf-8")
     assert "ETF Rotation Daily 2026-06-19" in text
+    assert "市場スコア" in text
+    assert "/100" in text
     assert "🟣 CHECK SELL" in text
     assert "今日は新規買いより、保有ETFの確認を優先。" in text
     assert "今日やること:" in text
+    assert "✅ SMHの保有状況だけ確認" in text
+    assert "❌ 新規買いは見送り" in text
+    assert "❌ ナンピン禁止" in text
     assert "新規買い: なし" in text
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
     assert "利確/売却確認: あり" in text
+    assert "次の買い候補:" in text
+    assert "VT  条件まで中距離" in text
+    assert "買い条件まで" in text
+    assert "中距離（目安3〜12日）" in text
     assert "VT/VTI/SPY/QQQは待ち。" in text
     assert "テーマETFの新規買い候補なし。" in text
     assert "状態: 過熱" in text
