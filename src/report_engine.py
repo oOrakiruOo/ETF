@@ -607,6 +607,9 @@ def write_decision_brief(
     portfolio_signal_lines: list[str] = []
     portfolio_reference_lines: list[str] = []
     reference_alert_lines: list[str] = []
+    reference_total_weight = 0.0
+    reference_top_name = ""
+    reference_top_weight = 0.0
     if portfolio is not None and not portfolio.empty:
         portfolio_frame = portfolio.copy()
         if "market_value" in portfolio_frame.columns:
@@ -616,6 +619,16 @@ def write_decision_brief(
         total_value = portfolio_frame.get("market_value", pd.Series(dtype=float)).dropna().sum()
         if total_value > 0:
             portfolio_summary_lines.append(f"評価額合計: {total_value:,.0f}円")
+        all_reference_rows = [
+            row
+            for row in portfolio_frame.to_dict("records")
+            if pd.notna(row.get("weight_pct")) and _portfolio_scope(row) not in {"etf_signal", "core"}
+        ]
+        if all_reference_rows:
+            reference_total_weight = sum(float(row.get("weight_pct") or 0.0) for row in all_reference_rows)
+            reference_top = max(all_reference_rows, key=lambda row: float(row.get("weight_pct") or 0.0))
+            reference_top_name = _holding_name(reference_top)
+            reference_top_weight = float(reference_top.get("weight_pct") or 0.0)
         top_holdings = portfolio_frame.sort_values("weight_pct", ascending=False).head(5)
         for row in top_holdings.to_dict("records"):
             holding_name = _holding_name(row)
@@ -692,8 +705,10 @@ def write_decision_brief(
         lines.extend(
             [
                 "参考保有の注意:",
+                f"参考保有合計: {reference_total_weight:.1f}%",
+                f"最大: {reference_top_name} {reference_top_weight:.1f}%",
                 *reference_alert_lines[:4],
-                "ETF信号とは別枠。買い増しは個別に確認。",
+                "ETF信号とは別枠。買い増しはETF通知で判断しない。",
                 "",
             ]
         )
