@@ -210,8 +210,8 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "参考保有の注意:" in text
     assert "SOFI: 11.0% / 保有継続 / 通常監視" in text
     assert "ETF信号とは別枠。買い増しは個別に確認。" in text
-    assert "監視候補:" in text
-    assert "VT  買い条件まで中距離" in text
+    assert "次の買い候補:" in text
+    assert "VT  買い条件まで中距離 / あと2.0%" in text
     assert "買いシグナル発生まで" in text
     assert "中距離（目安3〜12日）" in text
     assert "VT/VTI/SPY/QQQは待ち。" in text

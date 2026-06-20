@@ -401,6 +401,19 @@ def _buy_distance_label(row: dict[str, object]) -> str:
     return "遠い"
 
 
+def _buy_distance_detail(row: dict[str, object]) -> str:
+    label = _buy_distance_label(row)
+    try:
+        gap = float(row.get("第1買いまで%", 0.0))
+    except (TypeError, ValueError):
+        gap = 0.0
+    if label == "条件到達":
+        return "条件到達"
+    if gap < 0:
+        return f"{label} / あと{abs(gap):.1f}%"
+    return f"{label} / 条件付近"
+
+
 def _estimate_signal_distance(candidates: pd.DataFrame) -> str:
     if candidates.empty:
         return "未定"
@@ -674,13 +687,13 @@ def write_decision_brief(
             ]
         )
     lines.extend([
-        "監視候補:",
+        "次の買い候補:",
     ])
     if watch_candidates.empty:
         lines.append("なし")
     else:
         for row in watch_candidates.to_dict("records"):
-            lines.append(f"{_mobile_value(row.get('ETF'))}  買い条件まで{_buy_distance_label(row)}")
+            lines.append(f"{_mobile_value(row.get('ETF'))}  買い条件まで{_buy_distance_detail(row)}")
     lines.extend(
         [
             "",
