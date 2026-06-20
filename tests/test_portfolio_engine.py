@@ -44,6 +44,24 @@ def test_update_portfolio_prices_accepts_minimal_columns() -> None:
     assert float(updated.iloc[0]["market_value"]) == 250.0
 
 
+def test_update_portfolio_prices_keeps_manual_jpy_value() -> None:
+    portfolio = pd.DataFrame(
+        [
+            {
+                "ticker": "QQQ",
+                "quantity": 1,
+                "avg_price": 119355.0,
+                "current_price": 119355.0,
+                "manual_value_jpy": 119355.0,
+            }
+        ]
+    )
+    updated = update_portfolio_prices(portfolio, {"QQQ": 500.0})
+
+    assert float(updated.iloc[0]["current_price"]) == 119355.0
+    assert float(updated.iloc[0]["market_value"]) == 119355.0
+
+
 def test_normalize_portfolio_columns_adds_missing_optional_columns() -> None:
     portfolio = pd.DataFrame([{"ticker": "QQQ", "quantity": 1, "avg_price": 100.0}])
     normalized = normalize_portfolio_columns(portfolio)

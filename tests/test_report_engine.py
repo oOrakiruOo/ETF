@@ -159,6 +159,12 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     output_path = write_decision_brief(
         signal_table,
         readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        portfolio=pd.DataFrame(
+            [
+                {"ticker": "ORCAN", "market_value": 1800000, "weight_pct": 18.0},
+                {"ticker": "QQQ", "market_value": 120000, "weight_pct": 1.2},
+            ]
+        ),
         output_dir=tmp_path,
         report_date=datetime(2026, 6, 19),
     )
@@ -169,13 +175,16 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "🟣 CHECK SELL" in text
     assert "今日は新規買いより、保有ETFの確認を優先。" in text
     assert "今日やること:" in text
-    assert "✅ SMHの保有状況だけ確認" in text
+    assert "✅ 市場リスク対象を確認: SMH" in text
     assert "❌ 新規買いは見送り" in text
     assert "❌ ナンピン禁止" in text
     assert "新規買い: なし" in text
     assert "コア買い: 待ち" in text
     assert "サテライト買い: 待ち" in text
     assert "利確/売却確認: あり" in text
+    assert "保有サマリー:" in text
+    assert "評価額合計: 1,920,000円" in text
+    assert "ORCAN: 18.0%" in text
     assert "監視候補:" in text
     assert "VT  買い条件まで中距離" in text
     assert "買いシグナル発生まで" in text

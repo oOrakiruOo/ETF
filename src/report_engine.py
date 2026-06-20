@@ -331,6 +331,7 @@ def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) ->
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
+    portfolio: pd.DataFrame | None = None,
     output_dir: str | Path = "reports/daily",
     report_date: datetime | None = None,
 ) -> Path:
@@ -354,6 +355,14 @@ def write_decision_brief(
     watch_candidates = _watch_candidates(signal_table)
     market_score = _market_score(signal_table)
     distance_text = _estimate_signal_distance(watch_candidates)
+    held_tickers: set[str] = set()
+    if portfolio is not None and not portfolio.empty and "ticker" in portfolio.columns:
+        held_tickers = set(portfolio["ticker"].dropna().astype(str).str.upper())
+    held_risk_review = (
+        risk_review[risk_review["ETF"].astype(str).str.upper().isin(held_tickers)]
+        if held_tickers and not risk_review.empty
+        else pd.DataFrame()
+    )
     defense = False
     if readiness is not None and not readiness.empty:
         defense = readiness["状態"].eq("Block").any()
@@ -378,18 +387,24 @@ def write_decision_brief(
 
     buy_names = pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist() if has_buy else []
     sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
+    held_sell_names = held_risk_review["ETF"].astype(str).head(3).tolist() if not held_risk_review.empty else []
     today_actions = []
     if defense:
         today_actions.append("✅ 積立だけ通常ルールで継続")
-        if has_sell_check:
-            today_actions.append(f"✅ {', '.join(sell_names)}の保有状況だけ確認")
+        if held_sell_names:
+            today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
+        elif has_sell_check:
+            today_actions.append(f"✅ 市場リスク対象を確認: {', '.join(sell_names)}")
         elif has_buy:
             today_actions.append(f"✅ 買い候補は少額/見送り前提で手動確認: {', '.join(buy_names)}")
         today_actions.append("❌ 新規買い禁止")
         today_actions.append("❌ ナンピン禁止")
         today_actions.append("❌ 過熱・失速銘柄の追い買い禁止")
     elif has_sell_check:
-        today_actions.append(f"✅ {', '.join(sell_names)}の保有状況だけ確認")
+        if held_sell_names:
+            today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
+        else:
+            today_actions.append(f"✅ 市場リスク対象を確認: {', '.join(sell_names)}")
         today_actions.append("❌ 新規買いは見送り")
         today_actions.append("❌ ナンピン禁止")
     elif has_buy:
@@ -411,6 +426,22 @@ def write_decision_brief(
         reason_lines.append("リスク確認を優先")
     if data_stale:
         reason_lines.append("データ鮮度に問題あり")
+    portfolio_summary_lines: list[str] = []
+    if portfolio is not None and not portfolio.empty:
+        portfolio_frame = portfolio.copy()
+        if "market_value" in portfolio_frame.columns:
+            portfolio_frame["market_value"] = pd.to_numeric(portfolio_frame["market_value"], errors="coerce")
+        if "weight_pct" in portfolio_frame.columns:
+            portfolio_frame["weight_pct"] = pd.to_numeric(portfolio_frame["weight_pct"], errors="coerce")
+        total_value = portfolio_frame.get("market_value", pd.Series(dtype=float)).dropna().sum()
+        if total_value > 0:
+            portfolio_summary_lines.append(f"評価額合計: {total_value:,.0f}円")
+        top_holdings = portfolio_frame.sort_values("weight_pct", ascending=False).head(5)
+        for row in top_holdings.to_dict("records"):
+            ticker = _mobile_value(row.get("ticker"))
+            weight = row.get("weight_pct")
+            if pd.notna(weight):
+                portfolio_summary_lines.append(f"{ticker}: {float(weight):.1f}%")
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -441,6 +472,10 @@ def write_decision_brief(
         f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
         f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
+    ])
+    if portfolio_summary_lines:
+        lines.extend(["保有サマリー:", *portfolio_summary_lines, ""])
+    lines.extend([
         "監視候補:",
     ])
     if watch_candidates.empty:

@@ -22,6 +22,9 @@ PORTFOLIO_COLUMNS = [
     "stop_price",
     "target_price",
     "status",
+    "currency",
+    "manual_value_jpy",
+    "source_note",
 ]
 
 PORTFOLIO_NUMERIC_COLUMNS = [
@@ -30,6 +33,7 @@ PORTFOLIO_NUMERIC_COLUMNS = [
     "current_price",
     "stop_price",
     "target_price",
+    "manual_value_jpy",
 ]
 
 PORTFOLIO_REQUIRED_COLUMNS = ["ticker", "quantity", "avg_price"]
@@ -176,9 +180,13 @@ def update_portfolio_prices(portfolio: pd.DataFrame, prices: dict[str, float]) -
     updated["ticker"] = updated["ticker"].fillna("").astype(str).str.strip().str.upper()
     for column in ["quantity", "avg_price", "current_price", "stop_price", "target_price"]:
         updated[column] = pd.to_numeric(updated[column], errors="coerce")
+    manual_value = pd.to_numeric(updated["manual_value_jpy"], errors="coerce")
+    has_manual_value = manual_value.notna() & (manual_value > 0)
     mapped_prices = updated["ticker"].map(prices)
-    updated["current_price"] = mapped_prices.fillna(updated["current_price"])
+    updated["current_price"] = mapped_prices.where(~has_manual_value, updated["current_price"])
+    updated["current_price"] = updated["current_price"].fillna(mapped_prices)
     updated["market_value"] = updated["quantity"] * updated["current_price"]
+    updated.loc[has_manual_value, "market_value"] = manual_value[has_manual_value]
     total_value = updated["market_value"].sum()
     updated["weight_pct"] = updated["market_value"] / total_value * 100 if total_value else 0
     updated["unrealized_pnl"] = (updated["current_price"] - updated["avg_price"]) * updated["quantity"]

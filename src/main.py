@@ -1020,7 +1020,9 @@ def _load_latest_signal_context() -> tuple[datetime, pd.DataFrame, pd.DataFrame]
 
 def _write_latest_decision_brief() -> str:
     report_date, signal_table, readiness = _load_latest_signal_context()
-    output_path = write_decision_brief(signal_table, readiness=readiness, report_date=report_date)
+    current_prices = dict(zip(signal_table["ETF"], signal_table["現在価格"], strict=False)) if not signal_table.empty else {}
+    portfolio = evaluate_portfolio_actions(update_portfolio_prices(load_portfolio(), current_prices))
+    output_path = write_decision_brief(signal_table, readiness=readiness, portfolio=portfolio, report_date=report_date)
     return str(output_path)
 
 
