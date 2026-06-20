@@ -328,6 +328,23 @@ def _filter_rows(signal_table: pd.DataFrame, tickers: set[str] | None = None) ->
     return signal_table[signal_table["ETF"].isin(tickers)]
 
 
+def _portfolio_scope(row: dict[str, object]) -> str:
+    scope = _mobile_value(row.get("signal_scope")).strip()
+    if scope:
+        return scope
+    asset_class = _mobile_value(row.get("asset_class")).strip().lower()
+    ticker = _mobile_value(row.get("ticker")).upper()
+    if asset_class in {"fund", "index", "401k"}:
+        return "core"
+    if asset_class in {"stock", "jp_stock"}:
+        return "reference"
+    if ticker in {"VT", "VTI", "SPY", "QQQ"}:
+        return "etf_signal"
+    if ticker in {"SOFI", "TDK", "401K_FOREIGN_INDEX", "ORCAN"}:
+        return "reference"
+    return "etf_signal"
+
+
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -427,6 +444,8 @@ def write_decision_brief(
     if data_stale:
         reason_lines.append("データ鮮度に問題あり")
     portfolio_summary_lines: list[str] = []
+    portfolio_signal_lines: list[str] = []
+    portfolio_reference_lines: list[str] = []
     if portfolio is not None and not portfolio.empty:
         portfolio_frame = portfolio.copy()
         if "market_value" in portfolio_frame.columns:
@@ -442,6 +461,13 @@ def write_decision_brief(
             weight = row.get("weight_pct")
             if pd.notna(weight):
                 portfolio_summary_lines.append(f"{ticker}: {float(weight):.1f}%")
+                scope = _portfolio_scope(row)
+                if scope == "etf_signal":
+                    portfolio_signal_lines.append(f"{ticker}: ETF信号対象")
+                elif scope == "core":
+                    portfolio_reference_lines.append(f"{ticker}: コア資産")
+                else:
+                    portfolio_reference_lines.append(f"{ticker}: ETF信号の参考外")
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -475,6 +501,13 @@ def write_decision_brief(
     ])
     if portfolio_summary_lines:
         lines.extend(["保有サマリー:", *portfolio_summary_lines, ""])
+    if portfolio_signal_lines or portfolio_reference_lines:
+        lines.extend(["保有の扱い:"])
+        if portfolio_signal_lines:
+            lines.extend(portfolio_signal_lines[:4])
+        if portfolio_reference_lines:
+            lines.extend(portfolio_reference_lines[:4])
+        lines.append("")
     lines.extend([
         "監視候補:",
     ])

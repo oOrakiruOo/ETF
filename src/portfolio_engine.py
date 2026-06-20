@@ -24,6 +24,8 @@ PORTFOLIO_COLUMNS = [
     "status",
     "currency",
     "manual_value_jpy",
+    "asset_class",
+    "signal_scope",
     "source_note",
 ]
 

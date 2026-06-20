@@ -161,8 +161,8 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
         readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
         portfolio=pd.DataFrame(
             [
-                {"ticker": "ORCAN", "market_value": 1800000, "weight_pct": 18.0},
-                {"ticker": "QQQ", "market_value": 120000, "weight_pct": 1.2},
+                {"ticker": "ORCAN", "market_value": 1800000, "weight_pct": 18.0, "asset_class": "fund", "signal_scope": "core"},
+                {"ticker": "QQQ", "market_value": 120000, "weight_pct": 1.2, "asset_class": "etf", "signal_scope": "etf_signal"},
             ]
         ),
         output_dir=tmp_path,
@@ -185,6 +185,9 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "保有サマリー:" in text
     assert "評価額合計: 1,920,000円" in text
     assert "ORCAN: 18.0%" in text
+    assert "保有の扱い:" in text
+    assert "QQQ: ETF信号対象" in text
+    assert "ORCAN: コア資産" in text
     assert "監視候補:" in text
     assert "VT  買い条件まで中距離" in text
     assert "買いシグナル発生まで" in text
