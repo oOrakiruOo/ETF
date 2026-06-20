@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from src.pdca_engine import (
+    append_self_check_log,
     calculate_forward_return,
     evaluate_avoid_outcomes,
     evaluate_avoid_outcomes_for_signals,
@@ -15,6 +16,7 @@ from src.pdca_engine import (
     summarize_avoid_outcomes,
     summarize_action_label_history,
     summarize_manual_decisions,
+    summarize_self_check_logs,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -193,6 +195,22 @@ def test_summarize_manual_decisions_counts_decisions_and_fills() -> None:
     assert summary["要確認件数"] == 3
     assert summary["状態"] == "要確認"
     assert summary["理由"] == "未判断1件、一部約定1件、未約定1件"
+
+
+def test_append_and_summarize_self_check_logs(tmp_path) -> None:
+    output_path = tmp_path / "self_check_log.csv"
+    append_self_check_log("kept", log_date="2026-06-21", output_path=output_path)
+    append_self_check_log("broke", reason="SOFIを見て迷った", log_date="2026-06-22", output_path=output_path)
+    logs = pd.read_csv(output_path)
+    summary = summarize_self_check_logs(logs).iloc[0]
+
+    assert logs["status"].tolist() == ["守れた", "破った"]
+    assert summary["対象日数"] == 2
+    assert summary["守れた"] == 1
+    assert summary["破った"] == 1
+    assert summary["遵守率%"] == 50.0
+    assert summary["状態"] == "要確認"
+    assert summary["理由"] == "ルール破り1日"
 
 
 def test_evaluate_avoid_outcomes_marks_decline_as_correct(monkeypatch) -> None:

@@ -52,6 +52,7 @@ from .operations_engine import (
 from .pdca_engine import (
     AVOID_POLICY_SIGNALS,
     ACTION_LABEL_ORDER,
+    append_self_check_log,
     build_action_label_by_snapshot,
     evaluate_avoid_outcomes,
     evaluate_avoid_outcomes_for_signals,
@@ -65,6 +66,7 @@ from .pdca_engine import (
     summarize_avoid_outcomes,
     summarize_action_label_history,
     summarize_manual_decisions,
+    summarize_self_check_logs,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -837,6 +839,16 @@ def load_recent_manual_decisions(limit: int = 7) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def load_recent_self_checks(limit: int = 30) -> pd.DataFrame:
+    path = PROJECT_ROOT / "data" / "processed" / "pdca" / "self_check_log.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    frame = pd.read_csv(path)
+    if "date" in frame.columns:
+        frame = frame.sort_values("date").tail(limit)
+    return frame
+
+
 def run_weekly() -> None:
     setup_logging()
     settings = load_yaml("config/settings.yaml")
@@ -855,6 +867,7 @@ def run_weekly() -> None:
     avoid_summary = summarize_avoid_outcomes(avoid_outcomes)
     manual_decisions = load_recent_manual_decisions()
     manual_decision_summary = summarize_manual_decisions(manual_decisions)
+    self_check_summary = summarize_self_check_logs(load_recent_self_checks(limit=7))
     output_path = write_weekly_pdca_report(
         backtest_summary,
         parameter_results,
@@ -869,6 +882,7 @@ def run_weekly() -> None:
         avoid_summary,
         avoid_policy_name,
         manual_decision_summary=manual_decision_summary,
+        self_check_summary=self_check_summary,
     )
     logging.getLogger(__name__).info("Weekly report written: %s", output_path)
     print(f"週次PDCAレポートを作成しました: {output_path}")
@@ -982,6 +996,13 @@ def run_user_friction_simulation() -> None:
     output_path = write_user_friction_simulation_report(friction_table)
     logging.getLogger(__name__).info("User friction simulation report written: %s", output_path)
     print(f"ユーザー不満シミュレーションを作成しました: {output_path}")
+
+
+def run_self_check(status: str, reason: str = "") -> None:
+    setup_logging()
+    output_path = append_self_check_log(status=status, reason=reason)
+    logging.getLogger(__name__).info("Self check logged: %s status=%s", output_path, status)
+    print(f"自己確認を記録しました: {output_path}")
 
 
 def run_line_broadcast_weekly_summary() -> None:
@@ -1575,6 +1596,7 @@ def main() -> None:
             "weekly",
             "weekly-line-summary",
             "user-friction-sim",
+            "self-check",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1601,6 +1623,8 @@ def main() -> None:
     )
     parser.add_argument("--refresh", action="store_true", help="価格データを再取得します")
     parser.add_argument("--profile", default=DEFAULT_STRATEGY_PROFILE, help="strategy_profiles.yamlのプロファイル名")
+    parser.add_argument("--status", default="kept", help="self-check用: kept/broke/pending")
+    parser.add_argument("--reason", default="", help="self-check用: 破った理由やメモ")
     args = parser.parse_args()
     if args.command == "refine":
         run_refine(refresh=args.refresh)
@@ -1616,6 +1640,8 @@ def main() -> None:
         run_weekly_line_summary()
     elif args.command == "user-friction-sim":
         run_user_friction_simulation()
+    elif args.command == "self-check":
+        run_self_check(status=args.status, reason=args.reason)
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":

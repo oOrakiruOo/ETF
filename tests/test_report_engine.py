@@ -487,6 +487,19 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
                 }
             ]
         ),
+        self_check_summary=pd.DataFrame(
+            [
+                {
+                    "対象日数": 2,
+                    "守れた": 1,
+                    "破った": 1,
+                    "保留": 0,
+                    "遵守率%": 50.0,
+                    "状態": "要確認",
+                    "理由": "ルール破り1日",
+                }
+            ]
+        ),
         output_dir=tmp_path,
         processed_output_dir=tmp_path / "processed",
         report_date=datetime(2026, 6, 15),
@@ -495,6 +508,9 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
     assert "### 手動判断ログ" in text
     assert "buy件数" in text
     assert "要確認" in text
+    assert "### 自己確認ログ" in text
+    assert "遵守率%" in text
+    assert "ルール破り1日" in text
 
 
 def test_weekly_report_shows_previous_open_action_items(tmp_path) -> None:

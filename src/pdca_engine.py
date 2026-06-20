@@ -38,6 +38,15 @@ AVOID_POLICY_SIGNALS = {
 }
 
 ACTION_LABEL_ORDER = ["🔴 DEFENSE", "🟣 CHECK SELL", "🟢 CHECK BUY", "🟡 WAIT"]
+SELF_CHECK_COLUMNS = ["date", "status", "reason", "source"]
+SELF_CHECK_STATUS_MAP = {
+    "kept": "守れた",
+    "broke": "破った",
+    "pending": "保留",
+    "守れた": "守れた",
+    "破った": "破った",
+    "保留": "保留",
+}
 
 
 def _numeric_series(table: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
@@ -127,6 +136,83 @@ def summarize_manual_decisions(manual_decisions: pd.DataFrame) -> pd.DataFrame:
                 "要確認件数": needs_review_count,
                 "状態": "要確認" if needs_review_count else "OK",
                 "理由": "、".join(reasons) if reasons else "確認漏れなし",
+            }
+        ]
+    )
+
+
+def normalize_self_check_status(status: str) -> str:
+    normalized = str(status).strip().lower()
+    if normalized not in SELF_CHECK_STATUS_MAP:
+        raise ValueError("自己確認は kept/broke/pending または 守れた/破った/保留 を指定してください")
+    return SELF_CHECK_STATUS_MAP[normalized]
+
+
+def append_self_check_log(
+    status: str,
+    reason: str = "",
+    source: str = "manual",
+    log_date: str | None = None,
+    output_path: str | Path = "data/processed/pdca/self_check_log.csv",
+) -> Path:
+    path = PROJECT_ROOT / output_path if not Path(output_path).is_absolute() else Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    row = pd.DataFrame(
+        [
+            {
+                "date": log_date or pd.Timestamp.now(tz="Asia/Tokyo").strftime("%Y-%m-%d"),
+                "status": normalize_self_check_status(status),
+                "reason": reason,
+                "source": source,
+            }
+        ],
+        columns=SELF_CHECK_COLUMNS,
+    )
+    if path.exists():
+        previous = pd.read_csv(path)
+        combined = pd.concat([previous, row], ignore_index=True)
+    else:
+        combined = row
+    combined.loc[:, SELF_CHECK_COLUMNS].to_csv(path, index=False)
+    return path
+
+
+def summarize_self_check_logs(self_checks: pd.DataFrame) -> pd.DataFrame:
+    if self_checks.empty:
+        return pd.DataFrame(
+            [
+                {
+                    "対象日数": 0,
+                    "守れた": 0,
+                    "破った": 0,
+                    "保留": 0,
+                    "遵守率%": None,
+                    "状態": "OK",
+                    "理由": "自己確認ログなし",
+                }
+            ]
+        )
+    statuses = self_checks.get("status", pd.Series("", index=self_checks.index)).fillna("").astype(str)
+    kept = int(statuses.eq("守れた").sum())
+    broke = int(statuses.eq("破った").sum())
+    pending = int(statuses.eq("保留").sum())
+    decided = kept + broke
+    compliance_rate = round(kept / decided * 100, 1) if decided else None
+    reasons = []
+    if broke:
+        reasons.append(f"ルール破り{broke}日")
+    if pending:
+        reasons.append(f"保留{pending}日")
+    return pd.DataFrame(
+        [
+            {
+                "対象日数": len(self_checks),
+                "守れた": kept,
+                "破った": broke,
+                "保留": pending,
+                "遵守率%": compliance_rate,
+                "状態": "要確認" if broke or pending else "OK",
+                "理由": "、".join(reasons) if reasons else "ルール遵守",
             }
         ]
     )
