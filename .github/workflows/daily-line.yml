@@ -15,7 +15,6 @@ jobs:
     env:
       TZ: Asia/Tokyo
       LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-      LINE_TO_USER_ID: ${{ secrets.LINE_TO_USER_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +33,37 @@ jobs:
 
       - name: Send LINE decision brief
         run: python -m src.main line-broadcast-decision-brief
+
+      - name: Send LINE failure alert
+        if: failure()
+        shell: python
+        run: |
+          import json
+          import os
+          import urllib.request
+
+          token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+          if not token:
+              raise SystemExit(0)
+          payload = {
+              "messages": [
+                  {
+                      "type": "text",
+                      "text": "ETF Rotation Daily: GitHub Actions failed. Actionsログを確認してください。",
+                  }
+              ]
+          }
+          request = urllib.request.Request(
+              "https://api.line.me/v2/bot/message/broadcast",
+              data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+              method="POST",
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=20) as response:
+              print(f"failure alert status={response.status}")
 
       - name: Upload daily reports
         if: always()
