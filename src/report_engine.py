@@ -582,6 +582,37 @@ def _modern_market_guard_lines(
     return lines[:limit]
 
 
+def _future_action_guard_lines(
+    signal_table: pd.DataFrame,
+    market_score: int,
+    defense: bool = False,
+    limit: int = 4,
+) -> list[str]:
+    if signal_table.empty:
+        return []
+    lines: list[str] = []
+    stage_text = signal_table["ステージ"].astype(str)
+    theme_text = signal_table["テーマ"].astype(str)
+    ticker_text = signal_table["ETF"].astype(str)
+    hot_count = int(stage_text.str.contains("ステージ4", na=False).sum())
+    late_count = int(stage_text.str.contains("ステージ5", na=False).sum())
+    ai_count = int(theme_text.str.contains("AI|半導体|テクノロジ", case=False, na=False).sum())
+    defensive_theme_count = int(theme_text.str.contains("金融|電力|ヘルスケア|債券", na=False).sum())
+    bond_like_count = int(ticker_text.str.contains("IEF|TLT|SHY", case=False, na=False).sum())
+    high_risk_count = int(signal_table["テーマリスク"].astype(str).eq("高").sum())
+    if defense or market_score <= 35 or late_count >= 2:
+        lines.append("流動性ショック想定: 新規買いより現金余力を優先。")
+    if defensive_theme_count + bond_like_count >= 2 and high_risk_count >= 1:
+        lines.append("金利ショック想定: 金融/債券/公益の連鎖リスクを確認。")
+    if ai_count >= 2 and hot_count >= 1:
+        lines.append("AI集中相場想定: サテライト上限を超えて追わない。")
+    if hot_count >= 3:
+        lines.append("急反発相場想定: 置いていかれ不安で成行買いしない。")
+    if not lines:
+        lines.append("未来ショック想定: ルール外の買い増しをしない。")
+    return lines[:limit]
+
+
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -760,6 +791,7 @@ def write_decision_brief(
                             f"{holding_name}: {float(weight):.1f}% / {portfolio_action} / {portfolio_reason}"
                         )
     modern_guard_lines = _modern_market_guard_lines(signal_table, portfolio)
+    future_guard_lines = _future_action_guard_lines(signal_table, market_score, defense)
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -803,6 +835,8 @@ def write_decision_brief(
     ])
     if modern_guard_lines:
         lines.extend(["近年型リスク:", *modern_guard_lines, ""])
+    if future_guard_lines:
+        lines.extend(["未来ショック備え:", *future_guard_lines, ""])
     lines.extend([
         "今日の自己確認:",
         "守れた / 破った / 保留",
