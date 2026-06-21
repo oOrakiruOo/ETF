@@ -213,6 +213,8 @@ $env:LINE_TO_USER_ID = "..."
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\run_workflow.ps1 -Command line-summary
 ```
 
+LINE返信で `守れた / 破った / 保留` を記録するWebhookを使う場合は、`docs/line_webhook_deploy_guide.md` を参照してください。
+
 通知アウトボックスは外部送信用のJSONLです。現時点では自動送信せず、LINE/Slack/メールなどへ渡す前の安全な中間ファイルとして使います。
 送信前の要約だけを確認する場合は、以下を使います。
 

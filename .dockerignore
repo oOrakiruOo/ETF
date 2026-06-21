@@ -1,0 +1,13 @@
+.git
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+.env
+data/raw
+data/processed
+data/backtest
+data/portfolio/*.csv
+logs
+reports
+tmp

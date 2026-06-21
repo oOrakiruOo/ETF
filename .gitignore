@@ -10,6 +10,7 @@ data/portfolio/*.csv
 logs/
 reports/daily/
 reports/weekly/
+reports/pdca/
 
 # Local test temp
 tmp/
