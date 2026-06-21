@@ -13,6 +13,7 @@ function Get-LatestFile($Pattern) {
 }
 
 $MobileSummary = Get-LatestFile "mobile_summary_*.txt"
+$DecisionBrief = Get-LatestFile "decision_brief_*.txt"
 $GoLive = Get-LatestFile "go_live_readiness_*.md"
 $DailyHealth = Get-LatestFile "daily_health_*.md"
 $LineDeliveryLog = if (Test-Path $LineDir) {
@@ -25,6 +26,15 @@ $LineTaskName = "MASATO ETF Rotation LINE Summary"
 Write-Host "Latest ETF Rotation Status"
 Write-Host ""
 
+if ($DecisionBrief) {
+    Write-Host "[decision-brief] $($DecisionBrief.FullName)"
+    Get-Content -Path $DecisionBrief.FullName -Encoding UTF8 -TotalCount 28
+}
+else {
+    Write-Host "[decision-brief] missing"
+}
+
+Write-Host ""
 if ($MobileSummary) {
     Write-Host "[mobile-summary] $($MobileSummary.FullName)"
     Get-Content -Path $MobileSummary.FullName -Encoding UTF8 -TotalCount 12
