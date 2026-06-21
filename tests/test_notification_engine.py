@@ -43,6 +43,30 @@ def test_build_notification_candidates_flags_buy_and_score_events() -> None:
     assert result.iloc[0]["カテゴリ"] == "買い価格接近"
 
 
+def test_build_notification_candidates_prioritizes_sell_action_over_buy_zone() -> None:
+    table = pd.DataFrame(
+        [
+            {
+                "ETF": "GRID",
+                "判定": "売却候補",
+                "ETFスコア": 74.0,
+                "テーマスコア": 53.0,
+                "現在価格": 100.0,
+                "第1買い": 101.0,
+                "保守目標": 120.0,
+                "停止価格": 80.0,
+                "RR": 0.8,
+            }
+        ]
+    )
+    result = build_notification_candidates(table)
+
+    assert len(result) == 1
+    assert result.iloc[0]["シグナル"] == "売却候補"
+    assert result.iloc[0]["推奨行動"] == "新規買いせず保有継続可否を確認"
+    assert result.iloc[0]["購入割合"] == 0.0
+
+
 def test_build_portfolio_notification_candidates_flags_non_hold_actions() -> None:
     portfolio = pd.DataFrame(
         [
