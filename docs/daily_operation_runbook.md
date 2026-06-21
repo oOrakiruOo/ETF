@@ -38,6 +38,9 @@ LINE設定後は、以下の順で確認します。
 
 `line-delivery` に当日の送信履歴が出れば、送信処理は成功しています。
 
+Windowsタスクで自動送信する日は、PCの電源を入れ、Windowsにログオンした状態にしておきます。
+タスク設定はスリープ復帰とバッテリー実行を許可していますが、未ログオン状態では実行されない場合があります。
+
 ## 3. 手動判断CSV
 
 `data/processed/decisions/manual_decision_sheet_YYYY-MM-DD.csv` を開き、各行の `判断` を埋めます。
