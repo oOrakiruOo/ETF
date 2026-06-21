@@ -342,6 +342,47 @@ def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> No
     assert "SMH: コア分割買い検討" not in text
 
 
+def test_write_decision_brief_shows_long_crash_core_probe(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "QQQ",
+                "テーマ": "Core",
+                "ETFスコア": 36.0,
+                "テーマスコア": 60.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ1: 構想期",
+                "現在価格": 100.0,
+                "第1買い": 96.0,
+                "第1買いまで%": -4.0,
+                "第2買い": 92.0,
+                "第3買い": 88.0,
+                "保守目標": 120.0,
+                "強気目標": 130.0,
+                "停止価格": 80.0,
+                "RR": 4.0,
+                "判定": "売却候補",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            }
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2009, 3, 27),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "✅ コアだけ少額分割を手動検討: QQQ" in text
+    assert "新規買い: コア分割のみ確認" in text
+    assert "二番底リスクあり。試し玉以上に広げない。" in text
+    assert "QQQ: コア分割買い検討 / 中距離 / あと4.0%" in text
+    assert "確認対象:\nQQQ" not in text
+
+
 def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> None:
     signal_table = build_signal_table(
         [

@@ -446,18 +446,31 @@ def _watch_candidates(signal_table: pd.DataFrame, limit: int = 3) -> pd.DataFram
 
 
 def _core_recovery_candidates(core: pd.DataFrame, market_score: int, defense: bool, limit: int = 3) -> pd.DataFrame:
-    if core.empty or (market_score > 45 and not defense):
+    if core.empty:
         return core.head(0)
     candidates = core.copy()
     candidates["_buy_gap"] = pd.to_numeric(candidates.get("第1買いまで%", 99.0), errors="coerce").fillna(99.0)
     candidates["_etf_score"] = pd.to_numeric(candidates.get("ETFスコア", 0.0), errors="coerce").fillna(0.0)
     candidates["_rr"] = pd.to_numeric(candidates.get("RR", 0.0), errors="coerce").fillna(0.0)
-    candidates = candidates[
-        (candidates["_buy_gap"] >= -5.0)
+    stage = candidates["ステージ"].astype(str)
+    signal = candidates["判定"].astype(str)
+    short_crash_recovery = (
+        ((market_score <= 45) | defense)
+        & (candidates["_buy_gap"] >= -5.0)
         & (candidates["_etf_score"] >= 55.0)
-        & (~candidates["判定"].isin({"利確候補", "売却候補", "リスク削減"}))
+        & (~signal.isin({"利確候補", "売却候補", "リスク削減"}))
+    )
+    long_crash_recovery = (
+        stage.str.contains("ステージ1|ステージ2", na=False)
+        & (candidates["_buy_gap"] >= -8.0)
+        & (candidates["_etf_score"] >= 35.0)
+        & (candidates["_rr"] >= 3.0)
+        & (~signal.isin({"利確候補", "リスク削減"}))
+    )
+    candidates = candidates[
+        (short_crash_recovery | long_crash_recovery)
         & (candidates["テーマリスク"].astype(str).ne("高"))
-        & (~candidates["ステージ"].astype(str).str.contains("ステージ5", na=False))
+        & (~stage.str.contains("ステージ5", na=False))
     ]
     if candidates.empty:
         return candidates.drop(columns=[column for column in ["_buy_gap", "_etf_score", "_rr"] if column in candidates])
@@ -573,6 +586,14 @@ def write_decision_brief(
 
     has_buy = not core_buy.empty or not satellite_buy.empty
     has_core_recovery = not core_recovery.empty and core_buy.empty
+    if has_core_recovery and not risk_review.empty:
+        recovery_tickers = set(core_recovery["ETF"].astype(str).str.upper())
+        risk_review = risk_review[~risk_review["ETF"].astype(str).str.upper().isin(recovery_tickers)]
+        held_risk_review = (
+            risk_review[risk_review["ETF"].astype(str).str.upper().isin(held_tickers)]
+            if held_tickers and not risk_review.empty
+            else pd.DataFrame()
+        )
     has_sell_check = not risk_review.empty
     if defense:
         action_label = "🔴 DEFENSE"
@@ -580,9 +601,13 @@ def write_decision_brief(
     elif has_sell_check:
         action_label = "🟣 CHECK SELL"
         action_text = "今日は新規買いより、保有ETFの確認を優先。"
-    elif has_buy:
+    elif has_buy or has_core_recovery:
         action_label = "🟢 CHECK BUY"
-        action_text = "買い候補があります。手動確認してください。"
+        action_text = (
+            "コア分割買い候補があります。少額前提で手動確認してください。"
+            if has_core_recovery and not has_buy
+            else "買い候補があります。手動確認してください。"
+        )
     else:
         action_label = "🟡 WAIT"
         action_text = "本日の新規買い候補はありません。"
@@ -609,15 +634,23 @@ def write_decision_brief(
         today_actions.append("❌ ナンピン禁止")
         today_actions.append("❌ 過熱・失速銘柄の追い買い禁止")
     elif has_sell_check:
+        if has_core_recovery:
+            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
         if held_sell_names:
             today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
         else:
             today_actions.append(f"✅ 市場リスク対象を確認: {', '.join(sell_names)}")
-        today_actions.append("❌ 新規買いは見送り")
+        today_actions.append("❌ サテライト新規買い禁止" if has_core_recovery else "❌ 新規買いは見送り")
         today_actions.append("❌ ナンピン禁止")
-    elif has_buy:
-        today_actions.append(f"✅ 買い候補を手動確認: {', '.join(buy_names)}")
-        today_actions.append("❌ 成行飛びつき禁止")
+    elif has_buy or has_core_recovery:
+        if has_core_recovery and not has_buy:
+            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
+            today_actions.append("❌ サテライト新規買い禁止")
+        else:
+            today_actions.append(f"✅ 買い候補を手動確認: {', '.join(buy_names)}")
+            today_actions.append("❌ 成行飛びつき禁止")
         mistake_guard_lines[0] = "買う場合も成行で飛びつかない。"
     else:
         today_actions.append("✅ 積立だけ通常ルールで継続")
@@ -777,6 +810,7 @@ def write_decision_brief(
     ])
     if has_core_recovery:
         lines.append("暴落後の回復確認。買う場合も一括ではなく少額分割。")
+        lines.append("二番底リスクあり。試し玉以上に広げない。")
         for row in core_recovery.to_dict("records"):
             lines.append(f"{_mobile_value(row.get('ETF'))}: コア分割買い検討 / {_buy_distance_detail(row)}")
         lines.append("サテライトはまだ待つ。")
