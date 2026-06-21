@@ -16,6 +16,8 @@
 LINE設定が未完了の場合も、GO/HOLD判定に `LINE設定: Block` が表示されます。
 
 本運用前の最終リハーサルだけ行う場合は、`scripts/run_final_rehearsal.ps1` を実行します。LINEの実送信は行いません。
+正式版のLINEブロードキャストまで確認する場合だけ、`scripts/run_final_rehearsal.ps1 -SendLine` を実行します。
+個別Push送信を確認する場合は、正しいユーザーIDが保存された後に `scripts/run_final_rehearsal.ps1 -SendLine -UsePush` を使います。
 
 ## 週次
 
