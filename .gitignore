@@ -11,14 +11,4 @@ logs/
 reports/daily/
 reports/weekly/
 reports/pdca/
-
-# Local test temp
 tmp/
-.pytest_cache/
-
-
-# Local test temp
-tmp/
-.pytest_cache/
-tmp/
-.pytest_cache/

@@ -3,7 +3,7 @@ name: Daily ETF LINE
 on:
   workflow_dispatch:
   schedule:
-    - cron: "25 22 * * 0-4"
+    - cron: "55 22 * * 0-4"
 
 permissions:
   contents: read
@@ -42,6 +42,7 @@ jobs:
           name: daily-reports
           path: |
             reports/daily/
+            data/processed/line/
             data/processed/signals/
             data/processed/notifications/
             data/processed/decisions/
