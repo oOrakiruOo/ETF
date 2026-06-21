@@ -12,6 +12,7 @@ from src.line_engine import (
     build_line_push_payload,
     check_line_settings,
     extract_text_messages_from_webhook,
+    extract_user_ids_from_webhook,
     parse_self_check_reply,
     send_line_broadcast_message,
     send_line_push_message,
@@ -65,21 +66,41 @@ def test_extract_text_messages_from_webhook_ignores_non_text_events() -> None:
     assert extract_text_messages_from_webhook(payload) == ["守れた"]
 
 
-def test_handle_line_webhook_payload_records_self_check(tmp_path) -> None:
-    output_path = tmp_path / "self_check_log.csv"
+def test_extract_user_ids_from_webhook_returns_unique_line_user_ids() -> None:
     payload = {
         "events": [
-            {"type": "message", "message": {"type": "text", "text": "破った SOFIを見て迷った"}},
+            {"source": {"type": "user", "userId": "U111"}},
+            {"source": {"type": "user", "userId": "U111"}},
+            {"source": {"type": "group", "groupId": "G222"}},
+            {"source": {"type": "user", "userId": "invalid"}},
+            {"type": "follow", "source": {"type": "user", "userId": "U333"}},
+        ]
+    }
+
+    assert extract_user_ids_from_webhook(payload) == ["U111", "U333"]
+
+
+def test_handle_line_webhook_payload_records_self_check(tmp_path) -> None:
+    output_path = tmp_path / "self_check_log.csv"
+    user_ids_output_path = tmp_path / "line_user_ids.csv"
+    payload = {
+        "events": [
+            {
+                "type": "message",
+                "source": {"type": "user", "userId": "U123"},
+                "message": {"type": "text", "text": "破った SOFIを見て迷った"},
+            },
             {"type": "message", "message": {"type": "text", "text": "雑談"}},
         ]
     }
 
-    result = handle_line_webhook_payload(payload, output_path=output_path)
+    result = handle_line_webhook_payload(payload, output_path=output_path, user_ids_output_path=user_ids_output_path)
     text = output_path.read_text(encoding="utf-8")
 
-    assert result == {"messages": 2, "recorded": 1, "ignored": 1}
+    assert result == {"messages": 2, "user_ids": 1, "recorded": 1, "ignored": 1}
     assert "破った" in text
     assert "line_webhook" in text
+    assert "U123" in user_ids_output_path.read_text(encoding="utf-8")
 
 
 def test_handle_line_webhook_body_verifies_signature_and_records(tmp_path) -> None:
@@ -91,7 +112,7 @@ def test_handle_line_webhook_body_verifies_signature_and_records(tmp_path) -> No
     assert verify_line_signature(body, signature, secret)
     result = handle_line_webhook_body(body, signature=signature, channel_secret=secret, output_path=output_path)
 
-    assert result == {"ok": True, "messages": 1, "recorded": 1, "ignored": 0}
+    assert result == {"ok": True, "messages": 1, "user_ids": 0, "recorded": 1, "ignored": 0}
     assert "守れた" in output_path.read_text(encoding="utf-8")
 
 

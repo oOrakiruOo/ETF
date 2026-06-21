@@ -83,6 +83,23 @@ def extract_text_messages_from_webhook(payload: dict[str, Any]) -> list[str]:
     return messages
 
 
+def extract_user_ids_from_webhook(payload: dict[str, Any]) -> list[str]:
+    user_ids: list[str] = []
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return user_ids
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        source = event.get("source")
+        if not isinstance(source, dict):
+            continue
+        user_id = source.get("userId")
+        if isinstance(user_id, str) and user_id.startswith("U") and user_id not in user_ids:
+            user_ids.append(user_id)
+    return user_ids
+
+
 def _post_line_payload(payload: dict[str, Any], token: str, endpoint: str) -> int:
     request = urllib.request.Request(
         endpoint,
