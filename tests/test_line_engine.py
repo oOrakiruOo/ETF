@@ -8,6 +8,7 @@ import hmac
 import pytest
 
 from src.line_engine import (
+    append_line_delivery_log,
     build_line_broadcast_payload,
     build_line_push_payload,
     check_line_settings,
@@ -45,6 +46,22 @@ def test_build_line_broadcast_payload_uses_text_message() -> None:
     assert payload == {
         "messages": [{"type": "text", "text": "ETF summary"}],
     }
+
+
+def test_append_line_delivery_log_writes_non_secret_delivery_record(tmp_path) -> None:
+    output_path = append_line_delivery_log(
+        mode="broadcast",
+        command="line-broadcast-decision-brief",
+        source_path="reports/daily/decision_brief_2026-06-21.txt",
+        http_status=200,
+        output_dir=tmp_path,
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "line-broadcast-decision-brief" in text
+    assert "reports/daily/decision_brief_2026-06-21.txt" in text
+    assert "200" in text
+    assert "LINE_CHANNEL_ACCESS_TOKEN" not in text
 
 
 def test_parse_self_check_reply_accepts_daily_check_words() -> None:

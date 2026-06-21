@@ -4,6 +4,7 @@ $OutputEncoding = [Text.UTF8Encoding]::new()
 
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $DailyDir = Join-Path $ProjectRoot "reports\daily"
+$LineDir = Join-Path $ProjectRoot "data\processed\line"
 
 function Get-LatestFile($Pattern) {
     Get-ChildItem -Path $DailyDir -Filter $Pattern -ErrorAction SilentlyContinue |
@@ -14,6 +15,11 @@ function Get-LatestFile($Pattern) {
 $MobileSummary = Get-LatestFile "mobile_summary_*.txt"
 $GoLive = Get-LatestFile "go_live_readiness_*.md"
 $DailyHealth = Get-LatestFile "daily_health_*.md"
+$LineDeliveryLog = if (Test-Path $LineDir) {
+    Get-ChildItem -Path $LineDir -Filter "line_delivery_log_*.csv" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime |
+        Select-Object -Last 1
+}
 $LineTaskName = "MASATO ETF Rotation LINE Summary"
 
 Write-Host "Latest ETF Rotation Status"
@@ -54,4 +60,15 @@ if ($LASTEXITCODE -eq 0) {
 }
 else {
     Write-Host "missing"
+}
+
+Write-Host ""
+if ($LineDeliveryLog) {
+    Write-Host "[line-delivery] $($LineDeliveryLog.FullName)"
+    Import-Csv -Path $LineDeliveryLog.FullName -Encoding UTF8 |
+        Select-Object -Last 3 |
+        Format-Table -AutoSize
+}
+else {
+    Write-Host "[line-delivery] missing"
 }
