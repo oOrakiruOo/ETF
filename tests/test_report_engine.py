@@ -277,6 +277,71 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "解除条件:" in text
 
 
+def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "QQQ",
+                "テーマ": "Core",
+                "ETFスコア": 72.0,
+                "テーマスコア": 65.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ2: 回復期",
+                "現在価格": 100.0,
+                "第1買い": 100.0,
+                "第1買いまで%": 0.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 112.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 1.3,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+            {
+                "ETF": "SMH",
+                "テーマ": "半導体",
+                "ETFスコア": 75.0,
+                "テーマスコア": 74.0,
+                "テーマリスク": "中",
+                "テーマリスクスコア": 1,
+                "ステージ": "ステージ3: 加速期",
+                "現在価格": 100.0,
+                "第1買い": 100.0,
+                "第1買いまで%": 0.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 112.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 1.2,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "市場リスク", "状態": "Block", "理由": "急落日ガード"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2020, 3, 23),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "🔴 DEFENSE" in text
+    assert "✅ コアだけ少額分割を手動検討: QQQ" in text
+    assert "❌ サテライト新規買い禁止" in text
+    assert "新規買い: コア分割のみ確認" in text
+    assert "コア分割買い: 候補あり" in text
+    assert "QQQ: コア分割買い検討 / 近い / 条件付近" in text
+    assert "サテライトはまだ待つ。" in text
+    assert "SMH: コア分割買い検討" not in text
+
+
 def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> None:
     signal_table = build_signal_table(
         [

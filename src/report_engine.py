@@ -445,6 +445,29 @@ def _watch_candidates(signal_table: pd.DataFrame, limit: int = 3) -> pd.DataFram
     )
 
 
+def _core_recovery_candidates(core: pd.DataFrame, market_score: int, defense: bool, limit: int = 3) -> pd.DataFrame:
+    if core.empty or (market_score > 45 and not defense):
+        return core.head(0)
+    candidates = core.copy()
+    candidates["_buy_gap"] = pd.to_numeric(candidates.get("第1買いまで%", 99.0), errors="coerce").fillna(99.0)
+    candidates["_etf_score"] = pd.to_numeric(candidates.get("ETFスコア", 0.0), errors="coerce").fillna(0.0)
+    candidates["_rr"] = pd.to_numeric(candidates.get("RR", 0.0), errors="coerce").fillna(0.0)
+    candidates = candidates[
+        (candidates["_buy_gap"] >= -5.0)
+        & (candidates["_etf_score"] >= 55.0)
+        & (~candidates["判定"].isin({"利確候補", "売却候補", "リスク削減"}))
+        & (candidates["テーマリスク"].astype(str).ne("高"))
+        & (~candidates["ステージ"].astype(str).str.contains("ステージ5", na=False))
+    ]
+    if candidates.empty:
+        return candidates.drop(columns=[column for column in ["_buy_gap", "_etf_score", "_rr"] if column in candidates])
+    return (
+        candidates.sort_values(["_buy_gap", "_etf_score", "_rr"], ascending=[False, False, False])
+        .head(limit)
+        .drop(columns=["_buy_gap", "_etf_score", "_rr"])
+    )
+
+
 def _readiness_reason(readiness: pd.DataFrame | None, item: str) -> str:
     if readiness is None or readiness.empty:
         return ""
@@ -546,8 +569,10 @@ def write_decision_brief(
     data_stale_reason = _readiness_reason(readiness, "データ鮮度")
     data_stale = bool(data_stale_reason) and "当日分" not in data_stale_reason
     defense = defense or market_score <= 35
+    core_recovery = _core_recovery_candidates(core, market_score, defense and not data_stale)
 
     has_buy = not core_buy.empty or not satellite_buy.empty
+    has_core_recovery = not core_recovery.empty and core_buy.empty
     has_sell_check = not risk_review.empty
     if defense:
         action_label = "🔴 DEFENSE"
@@ -569,6 +594,9 @@ def write_decision_brief(
     mistake_guard_lines = ["上がっても飛びつかない。", "下がってもナンピンしない。"]
     if defense:
         today_actions.append("✅ 積立だけ通常ルールで継続")
+        if has_core_recovery:
+            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
         if held_sell_names:
             today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
         elif has_sell_check:
@@ -576,6 +604,8 @@ def write_decision_brief(
         elif has_buy:
             today_actions.append(f"✅ 買い候補は少額/見送り前提で手動確認: {', '.join(buy_names)}")
         today_actions.append("❌ 新規買い禁止")
+        if has_core_recovery:
+            today_actions[-1] = "❌ サテライト新規買い禁止"
         today_actions.append("❌ ナンピン禁止")
         today_actions.append("❌ 過熱・失速銘柄の追い買い禁止")
     elif has_sell_check:
@@ -603,6 +633,8 @@ def write_decision_brief(
         reason_lines.append("新規買いより保有確認を優先")
     if defense:
         reason_lines.append("リスク確認を優先")
+    if has_core_recovery:
+        reason_lines.append("コアは少額分割の確認余地あり")
     if data_stale:
         reason_lines.append("データ鮮度に問題あり")
     portfolio_summary_lines: list[str] = []
@@ -697,8 +729,9 @@ def write_decision_brief(
         "破った場合は週次PDCAで原因確認。",
         "",
         "買い判断:",
-        f"新規買い: {'あり' if has_buy else 'なし'}",
+        f"新規買い: {'あり' if has_buy else 'コア分割のみ確認' if has_core_recovery else 'なし'}",
         f"コア買い: {'候補あり' if not core_buy.empty else '待ち'}",
+        f"コア分割買い: {'候補あり' if has_core_recovery else '待ち'}",
         f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
         f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
         "",
@@ -742,7 +775,12 @@ def write_decision_brief(
     lines.extend([
         "コア:",
     ])
-    if core_buy.empty and core_wait.empty:
+    if has_core_recovery:
+        lines.append("暴落後の回復確認。買う場合も一括ではなく少額分割。")
+        for row in core_recovery.to_dict("records"):
+            lines.append(f"{_mobile_value(row.get('ETF'))}: コア分割買い検討 / {_buy_distance_detail(row)}")
+        lines.append("サテライトはまだ待つ。")
+    elif core_buy.empty and core_wait.empty:
         lines.append("VT/VTI/SPY/QQQは待ち。")
         lines.append("積立は通常ルール優先。")
     for row in pd.concat([core_buy, core_wait]).head(4).to_dict("records"):
