@@ -1031,6 +1031,22 @@ def run_line_webhook_payload(payload_path: str) -> None:
     print(f"LINE Webhookを処理しました: {result}")
 
 
+def run_line_user_ids() -> None:
+    setup_logging()
+    path = PROJECT_ROOT / "data" / "processed" / "line" / "line_user_ids.csv"
+    if not path.exists():
+        print(f"LINEユーザーIDはまだ保存されていません: {path}")
+        print("LINE公式アカウントに一言送信し、Webhookを受信してください。")
+        return
+    frame = pd.read_csv(path).fillna("")
+    if frame.empty or "user_id" not in frame.columns:
+        print(f"LINEユーザーIDはまだ保存されていません: {path}")
+        return
+    print(f"LINEユーザーID保存先: {path}")
+    for user_id in frame["user_id"].astype(str).tolist():
+        print(user_id)
+
+
 def run_line_broadcast_weekly_summary() -> None:
     setup_logging()
     output_path = _write_weekly_line_summary()
@@ -1625,6 +1641,7 @@ def main() -> None:
             "self-check",
             "line-self-check-reply",
             "line-webhook-payload",
+            "line-user-ids",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1676,6 +1693,8 @@ def main() -> None:
         run_line_self_check_reply(text=args.text)
     elif args.command == "line-webhook-payload":
         run_line_webhook_payload(payload_path=args.payload)
+    elif args.command == "line-user-ids":
+        run_line_user_ids()
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":
