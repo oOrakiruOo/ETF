@@ -92,6 +92,18 @@ def build_notification_candidates(signal_table: pd.DataFrame) -> pd.DataFrame:
         if stop_price > 0 and current_price <= stop_price * 1.02:
             reasons.append("停止価格に接近")
             action = "リスク削減または停止を確認"
+        if signal == "利確候補":
+            reasons.append("利確候補に該当")
+            action = "保有継続または一部利確を確認"
+            allocation_pct = 0.0
+        if signal == "売却候補":
+            reasons.append("売却候補に該当")
+            action = "新規買いせず保有継続可否を確認"
+            allocation_pct = 0.0
+        if signal == "リスク削減":
+            reasons.append("リスク削減に該当")
+            action = "新規買いせずリスク削減を確認"
+            allocation_pct = 0.0
         if etf_score >= 70:
             reasons.append("ETFスコア70超え")
         if etf_score < 60:
