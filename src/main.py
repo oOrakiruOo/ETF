@@ -33,7 +33,13 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
-from .line_engine import check_line_settings, parse_self_check_reply, send_line_broadcast_message, send_line_push_message
+from .line_engine import (
+    append_line_delivery_log,
+    check_line_settings,
+    parse_self_check_reply,
+    send_line_broadcast_message,
+    send_line_push_message,
+)
 from .line_webhook_engine import handle_line_webhook_payload
 from .notification_engine import (
     build_notification_candidates,
@@ -1052,7 +1058,14 @@ def run_line_broadcast_weekly_summary() -> None:
     output_path = _write_weekly_line_summary()
     text = Path(output_path).read_text(encoding="utf-8")
     status = send_line_broadcast_message(text)
+    delivery_log_path = append_line_delivery_log(
+        mode="broadcast",
+        command="line-broadcast-weekly-summary",
+        source_path=output_path,
+        http_status=status,
+    )
     logging.getLogger(__name__).info("LINE broadcast weekly summary sent: %s status=%s", output_path, status)
+    logging.getLogger(__name__).info("LINE delivery log written: %s", delivery_log_path)
     print(f"LINEへ週次要約をブロードキャスト送信しました: {output_path}")
 
 
@@ -1189,7 +1202,14 @@ def run_line_summary() -> None:
     output_path = _write_latest_mobile_summary()
     text = Path(output_path).read_text(encoding="utf-8")
     status = send_line_push_message(text)
+    delivery_log_path = append_line_delivery_log(
+        mode="push",
+        command="line-summary",
+        source_path=output_path,
+        http_status=status,
+    )
     logging.getLogger(__name__).info("LINE summary sent: %s status=%s", output_path, status)
+    logging.getLogger(__name__).info("LINE delivery log written: %s", delivery_log_path)
     print(f"LINEへ携帯向け要約を送信しました: {output_path}")
 
 
@@ -1198,7 +1218,14 @@ def run_line_decision_brief() -> None:
     output_path = _write_latest_decision_brief()
     text = Path(output_path).read_text(encoding="utf-8")
     status = send_line_push_message(text)
+    delivery_log_path = append_line_delivery_log(
+        mode="push",
+        command="line-decision-brief",
+        source_path=output_path,
+        http_status=status,
+    )
     logging.getLogger(__name__).info("LINE decision brief sent: %s status=%s", output_path, status)
+    logging.getLogger(__name__).info("LINE delivery log written: %s", delivery_log_path)
     print(f"LINEへ買い判断ブリーフを送信しました: {output_path}")
 
 
@@ -1207,7 +1234,14 @@ def run_line_broadcast_summary() -> None:
     output_path = _write_latest_mobile_summary()
     text = Path(output_path).read_text(encoding="utf-8")
     status = send_line_broadcast_message(text)
+    delivery_log_path = append_line_delivery_log(
+        mode="broadcast",
+        command="line-broadcast-summary",
+        source_path=output_path,
+        http_status=status,
+    )
     logging.getLogger(__name__).info("LINE broadcast summary sent: %s status=%s", output_path, status)
+    logging.getLogger(__name__).info("LINE delivery log written: %s", delivery_log_path)
     print(f"LINEへ携帯向け要約をブロードキャスト送信しました: {output_path}")
 
 
@@ -1216,7 +1250,14 @@ def run_line_broadcast_decision_brief() -> None:
     output_path = _write_latest_decision_brief()
     text = Path(output_path).read_text(encoding="utf-8")
     status = send_line_broadcast_message(text)
+    delivery_log_path = append_line_delivery_log(
+        mode="broadcast",
+        command="line-broadcast-decision-brief",
+        source_path=output_path,
+        http_status=status,
+    )
     logging.getLogger(__name__).info("LINE broadcast decision brief sent: %s status=%s", output_path, status)
+    logging.getLogger(__name__).info("LINE delivery log written: %s", delivery_log_path)
     print(f"LINEへ買い判断ブリーフをブロードキャスト送信しました: {output_path}")
 
 

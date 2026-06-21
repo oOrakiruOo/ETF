@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import csv
 import json
 import os
 import urllib.error
 import urllib.request
+from datetime import datetime
+from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
+
+from .utils import ensure_dir
 
 
 LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push"
 LINE_BROADCAST_ENDPOINT = "https://api.line.me/v2/bot/message/broadcast"
+DEFAULT_LINE_DELIVERY_LOG_DIR = "data/processed/line"
 SELF_CHECK_REPLY_MAP = {
     "守れた": "kept",
     "まもれた": "kept",
@@ -24,6 +31,33 @@ SELF_CHECK_REPLY_MAP = {
     "あとで": "pending",
     "pending": "pending",
 }
+
+
+def append_line_delivery_log(
+    *,
+    mode: str,
+    command: str,
+    source_path: str | Path,
+    http_status: int,
+    output_dir: str | Path = DEFAULT_LINE_DELIVERY_LOG_DIR,
+) -> Path:
+    now = datetime.now(ZoneInfo("Asia/Tokyo"))
+    directory = ensure_dir(output_dir)
+    output_path = directory / f"line_delivery_log_{now:%Y-%m-%d}.csv"
+    row = {
+        "sent_at": now.isoformat(timespec="seconds"),
+        "mode": mode,
+        "command": command,
+        "source_path": str(source_path),
+        "http_status": str(http_status),
+    }
+    exists = output_path.exists()
+    with output_path.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(row))
+        if not exists:
+            writer.writeheader()
+        writer.writerow(row)
+    return output_path
 
 
 def check_line_settings() -> dict[str, bool]:
