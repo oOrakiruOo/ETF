@@ -47,6 +47,25 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 - yfinanceの取得失敗に備え、失敗時はActionsログとartifactを確認します。
 - 失敗通知が届いた場合、GitHub Actionsの該当runログを確認します。
 
+## 検証済み実行
+
+- run: `27917326665`
+- event: `workflow_dispatch`
+- conclusion: `success`
+- LINE送信: `line-broadcast-decision-brief`
+- HTTP status: `200`
+- artifact: `daily-reports`
+
+この実行で、PCを使わずGitHub Actions上で日次生成からLINEブロードキャスト送信まで通ることを確認済みです。
+
+## クラウド実行の確認コマンド
+
+```powershell
+& "C:\Program Files\GitHub CLI\gh.exe" run list --workflow "Daily ETF LINE" --limit 5
+& "C:\Program Files\GitHub CLI\gh.exe" run view <run_id> --log
+& "C:\Program Files\GitHub CLI\gh.exe" run download <run_id> -n daily-reports -D tmp\actions-daily-reports-<run_id>
+```
+
 ## 次の改善候補
 
 1. 週次PDCAもActionsへ移す
