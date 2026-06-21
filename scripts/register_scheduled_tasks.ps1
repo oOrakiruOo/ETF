@@ -19,6 +19,8 @@ param(
     [string]$WeeklyHealthTime = "08:50",
     [bool]$AllowStartOnBattery = $true,
     [switch]$IncludeLineSummary,
+    [switch]$UseLineBroadcast,
+    [switch]$UseDecisionBrief,
     [switch]$Force,
     [switch]$DryRun
 )
@@ -127,10 +129,14 @@ $Tasks = @(
 )
 
 if ($IncludeLineSummary) {
+    $LineCommand = if ($UseDecisionBrief) { "line-decision-brief" } else { "line-summary" }
+    if ($UseLineBroadcast) {
+        $LineCommand = if ($UseDecisionBrief) { "line-broadcast-decision-brief" } else { "line-broadcast-summary" }
+    }
     $Tasks += @(
         @{
             Name = "$TaskPrefix LINE Summary"
-            Command = "line-summary"
+            Command = $LineCommand
             Schedule = "DAILY"
             Time = $LineSummaryTime
             Day = $null

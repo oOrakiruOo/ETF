@@ -71,13 +71,21 @@ $env:LINE_TO_USER_ID = "送信先ユーザーID"
 
 ## 5. スケジュール送信を登録する
 
-LINE設定が済んだ後に、以下でLINE Summaryタスクも登録します。
+LINE設定が済んだ後に、以下でLINE送信タスクも登録します。
+
+個別Push用の `LINE_TO_USER_ID` が未確定で、Botの友だちが自分だけなら、まずブロードキャスト版を使います。
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force -IncludeLineSummary
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force -IncludeLineSummary -UseLineBroadcast -UseDecisionBrief
 ```
 
-既定では毎日 07:55 に `line-summary` を実行します。
+既定では毎日 07:55 に `line-broadcast-decision-brief` を実行します。
+
+正しい `LINE_TO_USER_ID` を取得済みで個別Pushに切り替える場合は、`-UseLineBroadcast` を外します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotation-system-v4-0\scripts\register_scheduled_tasks.ps1 -Force -IncludeLineSummary -UseDecisionBrief
+```
 
 ## 6. 注意
 
