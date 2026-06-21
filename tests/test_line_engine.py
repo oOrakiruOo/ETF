@@ -8,6 +8,7 @@ from src.line_engine import (
     build_line_broadcast_payload,
     build_line_push_payload,
     check_line_settings,
+    parse_self_check_reply,
     send_line_broadcast_message,
     send_line_push_message,
 )
@@ -38,6 +39,13 @@ def test_build_line_broadcast_payload_uses_text_message() -> None:
     assert payload == {
         "messages": [{"type": "text", "text": "ETF summary"}],
     }
+
+
+def test_parse_self_check_reply_accepts_daily_check_words() -> None:
+    assert parse_self_check_reply("守れた") == ("kept", "守れた")
+    assert parse_self_check_reply("今日は破った。SOFIを買いそうだった") == ("broke", "今日は破った。SOFIを買いそうだった")
+    assert parse_self_check_reply("保留") == ("pending", "保留")
+    assert parse_self_check_reply("関係ないメッセージ") is None
 
 
 def test_send_line_push_message_requires_token(monkeypatch) -> None:

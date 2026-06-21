@@ -1,9 +1,10 @@
 param(
-    [ValidateSet("daily", "daily-ops", "weekly", "weekly-line-summary", "user-friction-sim", "self-check", "portfolio-check", "notification-summary", "notification-plan", "notification-packets", "daily-health", "weekly-health", "operations-status", "go-live-check", "decision-sheet", "mobile-summary", "decision-brief", "line-check", "line-test", "line-broadcast-test", "line-summary", "line-broadcast-summary", "line-decision-brief", "line-broadcast-decision-brief", "line-broadcast-weekly-summary", "replay-quick", "replay", "backtest")]
+    [ValidateSet("daily", "daily-ops", "weekly", "weekly-line-summary", "user-friction-sim", "self-check", "line-self-check-reply", "portfolio-check", "notification-summary", "notification-plan", "notification-packets", "daily-health", "weekly-health", "operations-status", "go-live-check", "decision-sheet", "mobile-summary", "decision-brief", "line-check", "line-test", "line-broadcast-test", "line-summary", "line-broadcast-summary", "line-decision-brief", "line-broadcast-decision-brief", "line-broadcast-weekly-summary", "replay-quick", "replay", "backtest")]
     [string]$Command = "daily",
     [switch]$Refresh,
     [string]$Status = "kept",
-    [string]$Reason = ""
+    [string]$Reason = "",
+    [string]$Text = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,6 +41,9 @@ if ($Command -eq "self-check") {
     if ($Reason) {
         $Arguments += @("--reason", $Reason)
     }
+}
+if ($Command -eq "line-self-check-reply") {
+    $Arguments += @("--text", $Text)
 }
 
 Push-Location $ProjectRoot

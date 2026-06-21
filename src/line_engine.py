@@ -9,6 +9,21 @@ from typing import Any
 
 LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push"
 LINE_BROADCAST_ENDPOINT = "https://api.line.me/v2/bot/message/broadcast"
+SELF_CHECK_REPLY_MAP = {
+    "守れた": "kept",
+    "まもれた": "kept",
+    "守った": "kept",
+    "ok": "kept",
+    "kept": "kept",
+    "破った": "broke",
+    "やぶった": "broke",
+    "破り": "broke",
+    "ng": "broke",
+    "broke": "broke",
+    "保留": "pending",
+    "あとで": "pending",
+    "pending": "pending",
+}
 
 
 def check_line_settings() -> dict[str, bool]:
@@ -39,6 +54,16 @@ def build_line_broadcast_payload(text: str) -> dict[str, Any]:
             }
         ],
     }
+
+
+def parse_self_check_reply(text: str) -> tuple[str, str] | None:
+    normalized = text.strip().lower()
+    if not normalized:
+        return None
+    for keyword, status in SELF_CHECK_REPLY_MAP.items():
+        if keyword in normalized:
+            return status, text.strip()
+    return None
 
 
 def _post_line_payload(payload: dict[str, Any], token: str, endpoint: str) -> int:

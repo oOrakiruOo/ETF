@@ -32,7 +32,7 @@ from .backtest_engine import (
 from .data_loader import flatten_universe, load_price_data
 from .etf_score_engine import calculate_etf_score
 from .indicators import add_indicators, latest_metrics
-from .line_engine import check_line_settings, send_line_broadcast_message, send_line_push_message
+from .line_engine import check_line_settings, parse_self_check_reply, send_line_broadcast_message, send_line_push_message
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
@@ -1005,6 +1005,18 @@ def run_self_check(status: str, reason: str = "") -> None:
     print(f"自己確認を記録しました: {output_path}")
 
 
+def run_line_self_check_reply(text: str) -> None:
+    setup_logging()
+    parsed = parse_self_check_reply(text)
+    if parsed is None:
+        print("自己確認として解釈できませんでした。守れた / 破った / 保留 のいずれかを含めてください。")
+        return
+    status, reason = parsed
+    output_path = append_self_check_log(status=status, reason=reason, source="line_reply")
+    logging.getLogger(__name__).info("LINE self check reply logged: %s status=%s", output_path, status)
+    print(f"LINE返信の自己確認を記録しました: {output_path}")
+
+
 def run_line_broadcast_weekly_summary() -> None:
     setup_logging()
     output_path = _write_weekly_line_summary()
@@ -1597,6 +1609,7 @@ def main() -> None:
             "weekly-line-summary",
             "user-friction-sim",
             "self-check",
+            "line-self-check-reply",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1625,6 +1638,7 @@ def main() -> None:
     parser.add_argument("--profile", default=DEFAULT_STRATEGY_PROFILE, help="strategy_profiles.yamlのプロファイル名")
     parser.add_argument("--status", default="kept", help="self-check用: kept/broke/pending")
     parser.add_argument("--reason", default="", help="self-check用: 破った理由やメモ")
+    parser.add_argument("--text", default="", help="line-self-check-reply用: LINE返信本文")
     args = parser.parse_args()
     if args.command == "refine":
         run_refine(refresh=args.refresh)
@@ -1642,6 +1656,8 @@ def main() -> None:
         run_user_friction_simulation()
     elif args.command == "self-check":
         run_self_check(status=args.status, reason=args.reason)
+    elif args.command == "line-self-check-reply":
+        run_line_self_check_reply(text=args.text)
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":
