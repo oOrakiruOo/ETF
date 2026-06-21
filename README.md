@@ -4,6 +4,8 @@ MASATO Tactical ETF Engine は、Core-Satellite戦略でテーマETFの買い候
 
 実際の売買発注は行いません。売買提案、通知文、検証、レポート作成までを担当し、最終判断と発注はMASATOが行います。
 
+システム全体像は `docs/system_overview.md` を参照してください。
+
 ## 構成
 
 - `config/`: ETFユニバース、テーマ対応、リスクルール、基本設定
