@@ -61,9 +61,16 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 ## クラウド実行の確認コマンド
 
 ```powershell
+.\scripts\check_cloud_delivery.ps1
 & "C:\Program Files\GitHub CLI\gh.exe" run list --workflow "Daily ETF LINE" --limit 5
 & "C:\Program Files\GitHub CLI\gh.exe" run view <run_id> --log
 & "C:\Program Files\GitHub CLI\gh.exe" run download <run_id> -n daily-reports -D tmp\actions-daily-reports-<run_id>
+```
+
+artifactまで取得する場合は以下を使います。
+
+```powershell
+.\scripts\check_cloud_delivery.ps1 -DownloadLatestArtifact
 ```
 
 ## 次の改善候補
