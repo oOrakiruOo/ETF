@@ -11,6 +11,14 @@
 7. LINE通知を見た後、`守れた` / `破った 理由` / `保留` のいずれかを返信または `self-check` で記録
 8. `GO（手動確認後）` でも実売買は自動実行しない。MASATOが最終判断する
 
+## 初回LINE自動送信後
+
+1. `scripts/check_line_delivery.ps1` を実行
+2. `Last Run Time` が当日7:55以降、`line-delivery` に当日ログがあることを確認
+3. LINE本文の最上段で、今日の行動が一瞬で分かるか確認
+4. 今日が `DEFENSE` の場合は、新規買い・ナンピンをしないことを優先
+5. 通知を見た後、`守れた` / `破った 理由` / `保留` のいずれかを記録
+
 判断CSVでは、`判断` は `buy` / `sell` / `hold` / `watch`、`約定状態` は `filled` / `partial` / `not_filled` を基本値として使います。
 未判断や未約定が残る場合、GO/HOLD判定は `HOLD` になります。
 LINE設定が未完了の場合も、GO/HOLD判定に `LINE設定: Block` が表示されます。
