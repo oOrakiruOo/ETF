@@ -8,10 +8,12 @@ from src.line_engine import (
     build_line_broadcast_payload,
     build_line_push_payload,
     check_line_settings,
+    extract_text_messages_from_webhook,
     parse_self_check_reply,
     send_line_broadcast_message,
     send_line_push_message,
 )
+from src.line_webhook_engine import handle_line_webhook_payload
 
 
 def test_check_line_settings_masks_secret_values(monkeypatch) -> None:
@@ -46,6 +48,35 @@ def test_parse_self_check_reply_accepts_daily_check_words() -> None:
     assert parse_self_check_reply("今日は破った。SOFIを買いそうだった") == ("broke", "今日は破った。SOFIを買いそうだった")
     assert parse_self_check_reply("保留") == ("pending", "保留")
     assert parse_self_check_reply("関係ないメッセージ") is None
+
+
+def test_extract_text_messages_from_webhook_ignores_non_text_events() -> None:
+    payload = {
+        "events": [
+            {"type": "message", "message": {"type": "text", "text": "守れた"}},
+            {"type": "message", "message": {"type": "image", "id": "1"}},
+            {"type": "follow"},
+        ]
+    }
+
+    assert extract_text_messages_from_webhook(payload) == ["守れた"]
+
+
+def test_handle_line_webhook_payload_records_self_check(tmp_path) -> None:
+    output_path = tmp_path / "self_check_log.csv"
+    payload = {
+        "events": [
+            {"type": "message", "message": {"type": "text", "text": "破った SOFIを見て迷った"}},
+            {"type": "message", "message": {"type": "text", "text": "雑談"}},
+        ]
+    }
+
+    result = handle_line_webhook_payload(payload, output_path=output_path)
+    text = output_path.read_text(encoding="utf-8")
+
+    assert result == {"messages": 2, "recorded": 1, "ignored": 1}
+    assert "破った" in text
+    assert "line_webhook" in text
 
 
 def test_send_line_push_message_requires_token(monkeypatch) -> None:

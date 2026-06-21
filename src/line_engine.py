@@ -66,6 +66,23 @@ def parse_self_check_reply(text: str) -> tuple[str, str] | None:
     return None
 
 
+def extract_text_messages_from_webhook(payload: dict[str, Any]) -> list[str]:
+    messages: list[str] = []
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return messages
+    for event in events:
+        if not isinstance(event, dict) or event.get("type") != "message":
+            continue
+        message = event.get("message")
+        if not isinstance(message, dict) or message.get("type") != "text":
+            continue
+        text = message.get("text")
+        if isinstance(text, str) and text.strip():
+            messages.append(text.strip())
+    return messages
+
+
 def _post_line_payload(payload: dict[str, Any], token: str, endpoint: str) -> int:
     request = urllib.request.Request(
         endpoint,
