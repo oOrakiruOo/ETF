@@ -209,6 +209,8 @@ PCを起動しなくても日次LINE通知を送るため、GitHub Actions運用
 
 PC上で動かす場合は、Windowsタスクスケジューラを使います。
 
+毎朝LINEを見た後の行動は `docs/user_daily_guide.md` を参照してください。
+
 主な確認コマンド:
 
 ```powershell
