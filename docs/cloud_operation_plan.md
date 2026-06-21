@@ -14,6 +14,7 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 - 実行内容:
   - `python -m src.main daily-ops --refresh`
   - `python -m src.main line-broadcast-decision-brief`
+  - 失敗時だけ短いLINE失敗通知
 - 成果物:
   - `reports/daily/`
   - `data/processed/line/`
@@ -44,9 +45,9 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 - 実行時刻は数分遅れることがあります。
 - 無料枠や利用条件は変わる可能性があります。
 - yfinanceの取得失敗に備え、失敗時はActionsログとartifactを確認します。
+- 失敗通知が届いた場合、GitHub Actionsの該当runログを確認します。
 
 ## 次の改善候補
 
-1. GitHub Actions失敗時にLINEへ失敗通知を送る
-2. 週次PDCAもActionsへ移す
-3. Actions artifactから最新レポートを取り出す手順を追加する
+1. 週次PDCAもActionsへ移す
+2. Actions artifactから最新レポートを取り出す手順を追加する
