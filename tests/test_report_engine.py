@@ -383,6 +383,80 @@ def test_write_decision_brief_shows_long_crash_core_probe(tmp_path) -> None:
     assert "確認対象:\nQQQ" not in text
 
 
+def test_write_decision_brief_warns_modern_concentration_risks(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "SMH",
+                "テーマ": "半導体",
+                "ETFスコア": 82.0,
+                "テーマスコア": 78.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ4: 過熱期",
+                "現在価格": 100.0,
+                "第1買い": 95.0,
+                "第1買いまで%": -5.0,
+                "第2買い": 90.0,
+                "第3買い": 85.0,
+                "保守目標": 115.0,
+                "強気目標": 125.0,
+                "停止価格": 80.0,
+                "RR": 0.8,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+            {
+                "ETF": "VGT",
+                "テーマ": "AI",
+                "ETFスコア": 80.0,
+                "テーマスコア": 76.0,
+                "テーマリスク": "高",
+                "テーマリスクスコア": 60,
+                "ステージ": "ステージ3: 加速期",
+                "現在価格": 100.0,
+                "第1買い": 96.0,
+                "第1買いまで%": -4.0,
+                "第2買い": 90.0,
+                "第3買い": 85.0,
+                "保守目標": 115.0,
+                "強気目標": 125.0,
+                "停止価格": 80.0,
+                "RR": 1.1,
+                "判定": "見送り",
+                "テーマリスク理由": "相対劣後",
+                "テーマ予防策": "Core優先",
+            },
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        portfolio=pd.DataFrame(
+            [
+                {
+                    "ticker": "SOFI",
+                    "display_name": "SOFI",
+                    "market_value": 1200000,
+                    "weight_pct": 12.0,
+                    "asset_class": "stock",
+                    "signal_scope": "reference",
+                }
+            ]
+        ),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 21),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "近年型リスク:" in text
+    assert "急騰テーマ注意: SMH は飛びつき禁止。" in text
+    assert "テーマ交代注意: VGT はCore優先で確認。" in text
+    assert "AI/半導体集中注意: 追加は一括ではなく上限確認。" in text
+    assert "個別株誘惑注意: SOFI はETF信号で買い増ししない。" in text
+
+
 def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> None:
     signal_table = build_signal_table(
         [

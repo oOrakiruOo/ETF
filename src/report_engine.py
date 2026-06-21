@@ -540,6 +540,48 @@ def _action_label_meaning(action_label: str) -> str:
     return meanings.get(action_label, "自己判断のために確認する日。")
 
 
+def _modern_market_guard_lines(
+    signal_table: pd.DataFrame,
+    portfolio: pd.DataFrame | None = None,
+    limit: int = 4,
+) -> list[str]:
+    lines: list[str] = []
+    if not signal_table.empty:
+        stage_text = signal_table["ステージ"].astype(str)
+        hot_rows = signal_table[
+            stage_text.str.contains("ステージ4", na=False)
+            & (pd.to_numeric(signal_table["ETFスコア"], errors="coerce").fillna(0.0) >= 75.0)
+        ]
+        if not hot_rows.empty:
+            names = hot_rows["ETF"].astype(str).head(3).tolist()
+            lines.append(f"急騰テーマ注意: {', '.join(names)} は飛びつき禁止。")
+        high_risk_rows = signal_table[signal_table["テーマリスク"].astype(str).eq("高")]
+        if not high_risk_rows.empty:
+            names = high_risk_rows["ETF"].astype(str).head(3).tolist()
+            lines.append(f"テーマ交代注意: {', '.join(names)} はCore優先で確認。")
+        ai_rows = signal_table[
+            signal_table["テーマ"].astype(str).str.contains("AI|半導体|テクノロジ", case=False, na=False)
+            & stage_text.str.contains("ステージ3|ステージ4", na=False)
+        ]
+        if len(ai_rows) >= 2:
+            lines.append("AI/半導体集中注意: 追加は一括ではなく上限確認。")
+    if portfolio is not None and not portfolio.empty and "weight_pct" in portfolio.columns:
+        weights = pd.to_numeric(portfolio["weight_pct"], errors="coerce").fillna(0.0)
+        reference_rows = portfolio.loc[
+            [
+                _portfolio_scope(row) not in {"etf_signal", "core"}
+                for row in portfolio.to_dict("records")
+            ]
+        ].copy()
+        if not reference_rows.empty:
+            reference_rows["weight_pct"] = weights.loc[reference_rows.index]
+            large_reference = reference_rows[reference_rows["weight_pct"] >= 10.0]
+            if not large_reference.empty:
+                names = [_holding_name(row) for row in large_reference.head(3).to_dict("records")]
+                lines.append(f"個別株誘惑注意: {', '.join(names)} はETF信号で買い増ししない。")
+    return lines[:limit]
+
+
 def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -717,6 +759,7 @@ def write_decision_brief(
                         reference_alert_lines.append(
                             f"{holding_name}: {float(weight):.1f}% / {portfolio_action} / {portfolio_reason}"
                         )
+    modern_guard_lines = _modern_market_guard_lines(signal_table, portfolio)
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -757,6 +800,10 @@ def write_decision_brief(
         "ルール破り防止:",
         *mistake_guard_lines,
         "",
+    ])
+    if modern_guard_lines:
+        lines.extend(["近年型リスク:", *modern_guard_lines, ""])
+    lines.extend([
         "今日の自己確認:",
         "守れた / 破った / 保留",
         "破った場合は週次PDCAで原因確認。",
