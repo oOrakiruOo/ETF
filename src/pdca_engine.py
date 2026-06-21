@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -39,6 +40,7 @@ AVOID_POLICY_SIGNALS = {
 
 ACTION_LABEL_ORDER = ["🔴 DEFENSE", "🟣 CHECK SELL", "🟢 CHECK BUY", "🟡 WAIT"]
 SELF_CHECK_COLUMNS = ["date", "status", "reason", "source"]
+DEFAULT_SELF_CHECK_LOG_PATH = "data/processed/pdca/self_check_log.csv"
 SELF_CHECK_STATUS_MAP = {
     "kept": "守れた",
     "broke": "破った",
@@ -148,14 +150,20 @@ def normalize_self_check_status(status: str) -> str:
     return SELF_CHECK_STATUS_MAP[normalized]
 
 
+def self_check_log_path(output_path: str | Path | None = None) -> Path:
+    configured = output_path or os.environ.get("SELF_CHECK_LOG_PATH") or DEFAULT_SELF_CHECK_LOG_PATH
+    path = Path(configured)
+    return PROJECT_ROOT / path if not path.is_absolute() else path
+
+
 def append_self_check_log(
     status: str,
     reason: str = "",
     source: str = "manual",
     log_date: str | None = None,
-    output_path: str | Path = "data/processed/pdca/self_check_log.csv",
+    output_path: str | Path | None = None,
 ) -> Path:
-    path = PROJECT_ROOT / output_path if not Path(output_path).is_absolute() else Path(output_path)
+    path = self_check_log_path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     row = pd.DataFrame(
         [

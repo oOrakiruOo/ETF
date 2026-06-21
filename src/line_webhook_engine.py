@@ -23,7 +23,7 @@ def handle_line_webhook_body(
     body: bytes,
     signature: str = "",
     channel_secret: str | None = None,
-    output_path: str | Path = "data/processed/pdca/self_check_log.csv",
+    output_path: str | Path | None = None,
 ) -> dict[str, object]:
     if channel_secret and not verify_line_signature(body, signature, channel_secret):
         return {"ok": False, "error": "invalid_signature", "messages": 0, "recorded": 0, "ignored": 0}
@@ -34,7 +34,7 @@ def handle_line_webhook_body(
 
 def handle_line_webhook_payload(
     payload: dict[str, Any],
-    output_path: str | Path = "data/processed/pdca/self_check_log.csv",
+    output_path: str | Path | None = None,
 ) -> dict[str, object]:
     messages = extract_text_messages_from_webhook(payload)
     recorded = 0

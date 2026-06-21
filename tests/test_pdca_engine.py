@@ -17,6 +17,7 @@ from src.pdca_engine import (
     summarize_action_label_history,
     summarize_manual_decisions,
     summarize_self_check_logs,
+    self_check_log_path,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -211,6 +212,15 @@ def test_append_and_summarize_self_check_logs(tmp_path) -> None:
     assert summary["遵守率%"] == 50.0
     assert summary["状態"] == "要確認"
     assert summary["理由"] == "ルール破り1日"
+
+
+def test_self_check_log_path_can_use_environment(monkeypatch, tmp_path) -> None:
+    output_path = tmp_path / "persistent" / "self_check_log.csv"
+    monkeypatch.setenv("SELF_CHECK_LOG_PATH", str(output_path))
+    append_self_check_log("pending")
+
+    assert self_check_log_path() == output_path
+    assert output_path.exists()
 
 
 def test_evaluate_avoid_outcomes_marks_decline_as_correct(monkeypatch) -> None:

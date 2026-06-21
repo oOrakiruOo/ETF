@@ -22,7 +22,7 @@ Docker確認:
 
 ```powershell
 docker build -t etf-line-webhook .
-docker run --rm -p 8080:8080 -e PORT=8080 etf-line-webhook
+docker run --rm -p 8080:8080 -e PORT=8080 -e SELF_CHECK_LOG_PATH=/data/self_check_log.csv -v ${PWD}/tmp:/data etf-line-webhook
 ```
 
 ## エンドポイント
@@ -46,6 +46,18 @@ https://example-free-cloud-app.example.com/line-webhook
 LINE_CHANNEL_SECRET
 ```
 
+自己確認ログの保存先を変える場合:
+
+```text
+SELF_CHECK_LOG_PATH
+```
+
+例:
+
+```text
+SELF_CHECK_LOG_PATH=/data/self_check_log.csv
+```
+
 `LINE_CHANNEL_SECRET` を設定すると、LINEの `X-Line-Signature` が正しい場合だけ記録します。
 未設定の場合は署名検証なしで受け付けます。ローカル検証以外では設定してください。
 
@@ -63,6 +75,6 @@ pending
 ## 注意
 
 無料クラウドの一時ファイル領域では、`self_check_log.csv` が再起動で消える場合があります。
-本番では永続ディスク、外部DB、GitHub Actions artifact、またはGoogle Sheets等への保存に切り替えてください。
+本番では `SELF_CHECK_LOG_PATH` を永続ディスクのパスへ向けるか、外部DB、GitHub Actions artifact、Google Sheets等への保存に切り替えてください。
 
 現時点の実装は「返信を受けて記録する最小入口」です。売買発注は行いません。

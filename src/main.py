@@ -69,6 +69,7 @@ from .pdca_engine import (
     summarize_action_label_history,
     summarize_manual_decisions,
     summarize_self_check_logs,
+    self_check_log_path,
     summarize_signal_accuracy,
     summarize_virtual_trades,
 )
@@ -842,7 +843,7 @@ def load_recent_manual_decisions(limit: int = 7) -> pd.DataFrame:
 
 
 def load_recent_self_checks(limit: int = 30) -> pd.DataFrame:
-    path = PROJECT_ROOT / "data" / "processed" / "pdca" / "self_check_log.csv"
+    path = self_check_log_path()
     if not path.exists():
         return pd.DataFrame()
     frame = pd.read_csv(path)
