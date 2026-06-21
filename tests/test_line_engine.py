@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import base64
+import hashlib
+import hmac
 
 import pytest
 
@@ -13,7 +16,7 @@ from src.line_engine import (
     send_line_broadcast_message,
     send_line_push_message,
 )
-from src.line_webhook_engine import handle_line_webhook_payload
+from src.line_webhook_engine import handle_line_webhook_body, handle_line_webhook_payload, verify_line_signature
 
 
 def test_check_line_settings_masks_secret_values(monkeypatch) -> None:
@@ -77,6 +80,32 @@ def test_handle_line_webhook_payload_records_self_check(tmp_path) -> None:
     assert result == {"messages": 2, "recorded": 1, "ignored": 1}
     assert "破った" in text
     assert "line_webhook" in text
+
+
+def test_handle_line_webhook_body_verifies_signature_and_records(tmp_path) -> None:
+    output_path = tmp_path / "self_check_log.csv"
+    body = json.dumps({"events": [{"type": "message", "message": {"type": "text", "text": "守れた"}}]}).encode("utf-8")
+    secret = "channel-secret"
+    signature = base64.b64encode(hmac.new(secret.encode("utf-8"), body, hashlib.sha256).digest()).decode("utf-8")
+
+    assert verify_line_signature(body, signature, secret)
+    result = handle_line_webhook_body(body, signature=signature, channel_secret=secret, output_path=output_path)
+
+    assert result == {"ok": True, "messages": 1, "recorded": 1, "ignored": 0}
+    assert "守れた" in output_path.read_text(encoding="utf-8")
+
+
+def test_handle_line_webhook_body_rejects_invalid_signature(tmp_path) -> None:
+    body = b'{"events":[]}'
+    result = handle_line_webhook_body(
+        body,
+        signature="invalid",
+        channel_secret="channel-secret",
+        output_path=tmp_path / "self_check_log.csv",
+    )
+
+    assert result["ok"] is False
+    assert result["error"] == "invalid_signature"
 
 
 def test_send_line_push_message_requires_token(monkeypatch) -> None:
