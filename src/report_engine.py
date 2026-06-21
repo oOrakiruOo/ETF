@@ -472,6 +472,10 @@ def _core_recovery_candidates(core: pd.DataFrame, market_score: int, defense: bo
         & (candidates["テーマリスク"].astype(str).ne("高"))
         & (~stage.str.contains("ステージ5", na=False))
     ]
+    if not candidates.empty:
+        candidates = candidates[
+            candidates.apply(lambda row: _buy_distance_label(row.to_dict()) != "遠い", axis=1)
+        ]
     if candidates.empty:
         return candidates.drop(columns=[column for column in ["_buy_gap", "_etf_score", "_rr"] if column in candidates])
     return (

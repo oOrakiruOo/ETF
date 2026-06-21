@@ -383,6 +383,44 @@ def test_write_decision_brief_shows_long_crash_core_probe(tmp_path) -> None:
     assert "確認対象:\nQQQ" not in text
 
 
+def test_write_decision_brief_excludes_far_core_recovery_candidate(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "SPY",
+                "テーマ": "Market",
+                "ETFスコア": 72.0,
+                "テーマスコア": 68.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ4: 過熱期",
+                "現在価格": 100.0,
+                "第1買い": 100.0,
+                "第1買いまで%": 0.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 108.0,
+                "強気目標": 112.0,
+                "停止価格": 85.0,
+                "RR": 0.4,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            }
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "市場リスク", "状態": "Block", "理由": "急落日ガード"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 21),
+    )
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "SPY: コア分割買い検討 / 遠い" not in text
+    assert "コア分割買い: 待ち" in text
+
+
 def test_write_decision_brief_warns_modern_concentration_risks(tmp_path) -> None:
     signal_table = build_signal_table(
         [
