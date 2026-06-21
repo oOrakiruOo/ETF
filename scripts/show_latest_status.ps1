@@ -14,6 +14,7 @@ function Get-LatestFile($Pattern) {
 $MobileSummary = Get-LatestFile "mobile_summary_*.txt"
 $GoLive = Get-LatestFile "go_live_readiness_*.md"
 $DailyHealth = Get-LatestFile "daily_health_*.md"
+$LineTaskName = "MASATO ETF Rotation LINE Summary"
 
 Write-Host "Latest ETF Rotation Status"
 Write-Host ""
@@ -41,4 +42,16 @@ if ($DailyHealth) {
 }
 else {
     Write-Host "[daily-health] missing"
+}
+
+Write-Host ""
+Write-Host "[line-task] $LineTaskName"
+$LineTask = schtasks /Query /TN $LineTaskName /V /FO LIST 2>$null
+if ($LASTEXITCODE -eq 0) {
+    $LineTask |
+        Select-String -Pattern "Next Run Time|Status|Last Run Time|Last Result|Task To Run" |
+        ForEach-Object { Write-Host $_.Line }
+}
+else {
+    Write-Host "missing"
 }

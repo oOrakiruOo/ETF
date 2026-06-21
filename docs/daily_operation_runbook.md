@@ -14,6 +14,8 @@ python -m src.main daily-ops
 .\scripts\show_latest_status.ps1
 ```
 
+この表示には、LINE正式版ブロードキャストの次回実行予定も含まれます。
+
 ## 2. 携帯向け要約とLINE確認
 
 `reports/daily/mobile_summary_YYYY-MM-DD.txt` を確認します。
@@ -23,10 +25,10 @@ LINE設定後は、以下の順で確認します。
 ```powershell
 .\scripts\run_workflow.ps1 -Command line-check
 .\scripts\run_workflow.ps1 -Command line-test
-.\scripts\run_workflow.ps1 -Command line-summary
+.\scripts\run_workflow.ps1 -Command line-broadcast-decision-brief
 ```
 
-`line-test` は短い疎通確認、`line-summary` は当日の携帯向け要約送信です。
+`line-test` は短い疎通確認、`line-broadcast-decision-brief` は当日の正式版ブロードキャスト送信です。
 
 ## 3. 手動判断CSV
 
