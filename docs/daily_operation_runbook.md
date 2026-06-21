@@ -30,6 +30,14 @@ LINE設定後は、以下の順で確認します。
 
 `line-test` は短い疎通確認、`line-broadcast-decision-brief` は当日の正式版ブロードキャスト送信です。
 
+自動LINE送信後の確認は、以下を使います。
+
+```powershell
+.\scripts\check_line_delivery.ps1
+```
+
+`line-delivery` に当日の送信履歴が出れば、送信処理は成功しています。
+
 ## 3. 手動判断CSV
 
 `data/processed/decisions/manual_decision_sheet_YYYY-MM-DD.csv` を開き、各行の `判断` を埋めます。
