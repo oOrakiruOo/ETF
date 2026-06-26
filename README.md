@@ -6,6 +6,8 @@ MASATO Tactical ETF Engine は、Core-Satellite戦略でテーマETFの買い候
 
 システム全体像は `docs/system_overview.md`、毎朝の使い方は `docs/user_daily_guide.md` を参照してください。
 
+Codexで作業する場合は、全体探索を避けるため先に `docs/codex_context_map.md` と `docs/codex_token_budget.md` を参照してください。
+
 ## 構成
 
 - `config/`: ETFユニバース、テーマ対応、リスクルール、基本設定

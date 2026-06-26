@@ -1,36 +1,48 @@
 # AGENTS.md
 
-## 共通ルール
+## Project
+
+ETF Rotation System.
+Python-based daily decision support for ETF buying, waiting, and holding.
+No automatic order execution. Final investment decisions are made by the user.
+
+## Language
 
 - チャットでは必ず日本語で応答してください。
-- 作業前に既存のコード・設定・ドキュメントを確認し、プロジェクトの方針に合わせて変更してください。
-- 変更後に検証コマンドが定義されている場合は、可能な限り実行して結果を確認してください。
-- .envファイルや秘密情報の内容を表示・コミットしないでください。
-- タスク指示は Goal / Context / Constraints / Done-when を意識して読み取り、不足している場合は合理的に補って作業してください。
+- コミットメッセージも日本語で記述してください。
 
-## 開発スタイル
+## Core Principle
 
-- TypeScriptを優先してください。ただし、このプロジェクトは仕様によりPythonで実装します。
-- package.jsonの依存関係は、明示的な依頼なしに変更しないでください。
-- 既存のテストを削除しないでください。
-- 大きな変更では、実装前に作業計画を立て、段階ごとに検証してください。
+The system should help prevent FOMO, panic buying, averaging down, and emotional trading.
+`DEFENSE` and `WAIT` are valuable outputs.
 
-## 自走時の基本ループ
+## Token Budget Rules
 
-- まず `AGENTS.md` と、存在する場合は `.agent/PLANS.md` を確認してください。
-- 作業を小さな単位に分け、各段階で変更内容と検証結果を確認してください。
-- 変更後は、プロジェクトで指定されたビルド・lint・テストを実行してください。
-- 検証に失敗した場合は、原因を調べて修正し、再度検証してください。
-- 検証できなかった場合は、その理由と残作業を明記してください。
+- Do not explore the whole repository unless explicitly asked.
+- Before editing, identify the minimum files needed for the task.
+- Do not read generated or heavy folders unless the user names a specific file.
+- Heavy folders: `data/`, `reports/`, `logs/`, `tmp/`, `.venv/`, `.pytest_cache/`, `raw/`.
+- Prefer `docs/codex_context_map.md` for orientation instead of rereading large docs.
+- For normal changes, run only relevant tests first; run the full suite only when risk is broad.
 
-## このPCでの注意点
+## Do Not
 
-- Windows PowerShellでは `npm` が実行ポリシーで止まる場合があるため、必要に応じて `npm.cmd` を使ってください。
-- Gitは `C:\Program Files\Git\cmd\git.exe` にインストールされています。PATHに反映されていないセッションでは、このフルパスを使ってください。
-- GitHub CLIは `C:\Program Files\GitHub CLI\gh.exe` にインストールされています。PATHに反映されていないセッションでは、このフルパスを使ってください。
+- Do not implement automatic trading or order execution.
+- Do not change investment rules without explicit instruction.
+- Do not expose, print, or commit `.env` or secrets.
+- Do not rewrite unrelated files.
+- Do not delete existing tests.
+- Do not push directly to `main`.
 
-## Git運用
+## Workflow
 
-- コミットメッセージは日本語で記述してください。
-- mainブランチへの直接pushは禁止です。
-- 変更はfeatureブランチからPull Requestを作成してください。
+1. Use a feature branch.
+2. Make the smallest change that satisfies the task.
+3. Run relevant validation.
+4. Open and merge a Pull Request when ready.
+
+## Local Commands
+
+- Git: `C:\Program Files\Git\cmd\git.exe`
+- GitHub CLI: `C:\Program Files\GitHub CLI\gh.exe`
+- Python tests: `.venv\Scripts\python.exe -m pytest --basetemp .\tmp\pytest`
