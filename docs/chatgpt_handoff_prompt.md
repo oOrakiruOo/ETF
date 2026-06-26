@@ -3,6 +3,18 @@
 PC版ChatGPTでこのシステムについて相談する時は、下のプロンプトを貼り付けます。
 Codex側で大量のファイルを読ませず、ChatGPTに方針整理や文章改善を任せるためのものです。
 
+クリップボードへ自動コピーする場合:
+
+```powershell
+.\scripts\copy_chatgpt_prompt.ps1
+```
+
+ChatGPTをブラウザで開く場合:
+
+```powershell
+.\scripts\copy_chatgpt_prompt.ps1 -OpenChatGpt
+```
+
 ```text
 あなたはETF Rotation Systemのレビュー補助です。
 
