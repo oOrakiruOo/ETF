@@ -18,6 +18,7 @@
 - LINE送信ログ
 - Windowsタスク運用
 - GitHub ActionsによるPCオフ運用
+- 週次PDCAのGitHub Actions化
 - 失敗時LINE通知
 - システム概要書
 - ユーザー向け日次ガイド
@@ -25,25 +26,21 @@
 
 ## 残タスク
 
-1. 週次PDCAのクラウド移行
-   - 現在は日次LINEがActions対応済み
-   - 週次レポート、週次ヘルス、replay-quickをActions化するか検討
-
-2. Actions artifact確認手順の実運用化
+1. Actions artifact確認手順の実運用化
    - `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で取得可能
    - 取得後に何を見るかをさらに短くする余地あり
 
-3. 1週間運用後のPDCA確認
+2. 1週間運用後のPDCA確認
    - `守れた / 破った / 保留`
    - DEFENSE日に買い急ぎを止められたか
    - CHECK BUYが実際に判断しやすかったか
 
-4. 通知文の微調整
+3. 通知文の微調整
    - LINE先頭の分かりやすさ
    - 次の買い候補の表示量
    - 売却/利確確認の表現
 
-5. データソース強化
+4. データソース強化
    - 現在はyfinance中心
    - 将来的に代替データソースや冗長化を検討
 

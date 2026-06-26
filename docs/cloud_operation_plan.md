@@ -9,6 +9,8 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 
 ## 現在のGitHub Actions
 
+### Daily ETF LINE
+
 - 実行時刻: `cron: "55 22 * * 0-4"`
 - 日本時間: 平日 07:55 頃
 - 実行内容:
@@ -20,6 +22,25 @@ PCをオフにして日次LINE通知を送るための運用方針です。
   - `data/processed/line/`
   - `data/processed/signals/`
   - `data/processed/notifications/`
+  - `data/processed/decisions/`
+
+### Weekly ETF PDCA
+
+- 実行時刻: `cron: "10 23 * * 5"`
+- 日本時間: 土曜 08:10 頃
+- 実行内容:
+  - `python -m src.main daily-ops --refresh`
+  - `python -m src.main weekly`
+  - `python -m src.main replay-quick`
+  - `python -m src.main weekly-health`
+  - `python -m src.main line-broadcast-weekly-summary`
+  - 失敗時だけ短いLINE失敗通知
+- 成果物:
+  - `reports/weekly/`
+  - `reports/daily/`
+  - `data/processed/pdca/`
+  - `data/processed/line/`
+  - `data/processed/signals/`
   - `data/processed/decisions/`
 
 ## 必要なGitHub Secrets
@@ -63,8 +84,10 @@ PCをオフにして日次LINE通知を送るための運用方針です。
 ```powershell
 .\scripts\check_cloud_delivery.ps1
 & "C:\Program Files\GitHub CLI\gh.exe" run list --workflow "Daily ETF LINE" --limit 5
+& "C:\Program Files\GitHub CLI\gh.exe" run list --workflow "Weekly ETF PDCA" --limit 5
 & "C:\Program Files\GitHub CLI\gh.exe" run view <run_id> --log
 & "C:\Program Files\GitHub CLI\gh.exe" run download <run_id> -n daily-reports -D tmp\actions-daily-reports-<run_id>
+& "C:\Program Files\GitHub CLI\gh.exe" run download <run_id> -n weekly-pdca-reports -D tmp\actions-weekly-pdca-<run_id>
 ```
 
 artifactまで取得する場合は以下を使います。
@@ -75,5 +98,5 @@ artifactまで取得する場合は以下を使います。
 
 ## 次の改善候補
 
-1. 週次PDCAもActionsへ移す
-2. Actions artifactから最新レポートを取り出す手順を追加する
+1. Actions artifactから最新レポートを取り出す手順をさらに短くする
+2. 1週間運用後に `守れた / 破った / 保留` を週次PDCAへ反映する
