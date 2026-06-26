@@ -5,8 +5,8 @@
 
 ## 現在地
 
-- 全体進捗: 約98%
-- 本運用前の安定化: 完了寄り
+- 全体進捗: 約99%
+- 本運用前の安定化: 実装完了寄り
 - PCオフ運用: GitHub Actionsで実証済み
 - 日次LINE通知: schedule実行で連続成功中
 
@@ -30,21 +30,43 @@
 
 ## 残タスク
 
-1. 1週間運用後の実データ確認
+1. 次回の日次クラウド実行確認
+   - `Daily ETF LINE` が成功
+   - LINEが届く
+   - `data_source_status.csv` がartifactに含まれる
+
+2. 初回の週次クラウドPDCA確認
+   - `Weekly ETF PDCA` が成功
+   - 週次LINE要約が届く
+   - `weekly_report` と `replay_pdca_report` がartifactに含まれる
+
+3. 1週間運用後の実データ確認
    - `守れた / 破った / 保留`
    - DEFENSE日に買い急ぎを止められたか
    - CHECK BUYが実際に判断しやすかったか
 
-2. 通知文の継続観察
+## 継続改善候補
+
+1. 通知文の継続観察
    - 次の買い候補の表示量
    - 売却/利確確認の表現
    - 1週間使って迷いが残った箇所
 
-3. データソース強化
+2. データソース強化
    - 現在はyfinance中心
    - 次段階で代替データソースや冗長化を検討
 
+## 100%判定
+
+以下を満たしたら、本運用準備は100%と判定します。
+
+1. 平日の日次LINEがクラウドから届く
+2. 土曜の週次PDCA LINEがクラウドから届く
+3. 1週間分の自己確認が週次PDCAに反映される
+4. `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で日次成果物を確認できる
+5. `scripts/check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact` で週次成果物を確認できる
+
 ## 当面の最優先
 
-1週間は大きな仕様変更を増やさず、日次通知を受けて行動できたかを観察する。
+新機能を増やさず、クラウド実行と自己確認ログを1週間観察する。
 改善は週次PDCAでまとめて入れる。
