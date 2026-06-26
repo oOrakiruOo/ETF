@@ -94,9 +94,15 @@ artifactまで取得する場合は以下を使います。
 
 ```powershell
 .\scripts\check_cloud_delivery.ps1 -DownloadLatestArtifact
+.\scripts\check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact
 ```
+
+確認は `[check-these-first]` に出るファイルだけを先に見ます。
+
+- 日次: 判断ブリーフ、日次レポート、LINE送信ログ、手動判断CSV
+- 週次: 週次LINE要約、週次ヘルス、週次PDCA、履歴再生PDCA、LINE送信ログ
 
 ## 次の改善候補
 
-1. Actions artifactから最新レポートを取り出す手順をさらに短くする
-2. 1週間運用後に `守れた / 破った / 保留` を週次PDCAへ反映する
+1. 1週間運用後に `守れた / 破った / 保留` を週次PDCAへ反映する
+2. 通知文の微調整を週次PDCAでまとめて行う

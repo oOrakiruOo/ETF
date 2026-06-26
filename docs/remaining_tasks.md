@@ -23,24 +23,21 @@
 - システム概要書
 - ユーザー向け日次ガイド
 - Codex用最短MAP
+- Actions artifact確認手順の短縮
 
 ## 残タスク
 
-1. Actions artifact確認手順の実運用化
-   - `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で取得可能
-   - 取得後に何を見るかをさらに短くする余地あり
-
-2. 1週間運用後のPDCA確認
+1. 1週間運用後のPDCA確認
    - `守れた / 破った / 保留`
    - DEFENSE日に買い急ぎを止められたか
    - CHECK BUYが実際に判断しやすかったか
 
-3. 通知文の微調整
+2. 通知文の微調整
    - LINE先頭の分かりやすさ
    - 次の買い候補の表示量
    - 売却/利確確認の表現
 
-4. データソース強化
+3. データソース強化
    - 現在はyfinance中心
    - 将来的に代替データソースや冗長化を検討
 
