@@ -26,6 +26,7 @@ DAILY_HEALTH_ARTIFACTS = [
     ("日次通知パケット", "data/processed/notifications/notification_packets_daily_digest_{date}.jsonl", True),
     ("記録通知パケット", "data/processed/notifications/notification_packets_archive_only_{date}.jsonl", True),
     ("シグナルCSV", "data/processed/signals/signals_{date}.csv"),
+    ("データ取得元ステータス", "data/processed/data_source_status.csv"),
 ]
 
 WEEKLY_HEALTH_ARTIFACTS = [

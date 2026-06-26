@@ -94,6 +94,7 @@ ETF Rotation Daily 2026-06-22
 ### 価格データ
 
 `yfinance`からETF価格を取得し、ローカルまたはGitHub Actions上で日次処理します。
+取得失敗時に既存キャッシュがある場合はキャッシュへ退避し、`data/processed/data_source_status.csv` に取得元を記録します。
 
 ### 指標
 
