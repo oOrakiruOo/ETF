@@ -15,6 +15,18 @@ ChatGPTをブラウザで開く場合:
 .\scripts\copy_chatgpt_prompt.ps1 -OpenChatGpt
 ```
 
+ChatGPTへ貼り付けまで自動化する場合:
+
+```powershell
+.\scripts\copy_chatgpt_prompt.ps1 -PasteToChatGpt
+```
+
+貼り付け後にそのまま送信する場合:
+
+```powershell
+.\scripts\copy_chatgpt_prompt.ps1 -Submit
+```
+
 ```text
 あなたはETF Rotation Systemのレビュー補助です。
 
