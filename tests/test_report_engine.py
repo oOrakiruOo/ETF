@@ -191,6 +191,7 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "市場スコア" in text
     assert "/100" in text
     assert "🟣 CHECK SELL" in text
+    assert "結論: 新規買いは見送り。保有ETFだけ確認。" in text
     assert "今日は新規買いより、保有ETFの確認を優先。" in text
     assert "今日やること:" in text
     assert "✅ 市場リスク対象を確認: SMH" in text
@@ -271,6 +272,7 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "最新シグナルは2026-06-18（2日前）" in text
     assert "この通知は新規売買判断に使わないでください。" in text
     assert "🔴 DEFENSE" in text
+    assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
     assert "危険だから買わない。資金を守る日。" in text
     assert "DEFENSE継続:" in text
     assert "2日" in text
@@ -333,6 +335,7 @@ def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> No
 
     text = output_path.read_text(encoding="utf-8")
     assert "🔴 DEFENSE" in text
+    assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
     assert "✅ コアだけ少額分割を手動検討: QQQ" in text
     assert "❌ サテライト新規買い禁止" in text
     assert "新規買い: コア分割のみ確認" in text
@@ -655,6 +658,7 @@ def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> No
 
     text = output_path.read_text(encoding="utf-8")
     assert "🟡 WAIT" in text
+    assert "結論: 何もしない。条件が来るまで待つ。" in text
     assert "危険ではないが条件未達。買い場を待つ日。" in text
     assert "❌ 新規買いは見送り" in text
 

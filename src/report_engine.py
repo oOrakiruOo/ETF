@@ -675,9 +675,11 @@ def write_decision_brief(
     if defense:
         action_label = "🔴 DEFENSE"
         action_text = "新規買いは慎重判断。リスク確認を優先してください。"
+        conclusion_text = "積立だけ。新規買いとナンピンはしない。"
     elif has_sell_check:
         action_label = "🟣 CHECK SELL"
         action_text = "今日は新規買いより、保有ETFの確認を優先。"
+        conclusion_text = "新規買いは見送り。保有ETFだけ確認。"
     elif has_buy or has_core_recovery:
         action_label = "🟢 CHECK BUY"
         action_text = (
@@ -685,9 +687,15 @@ def write_decision_brief(
             if has_core_recovery and not has_buy
             else "買い候補があります。手動確認してください。"
         )
+        conclusion_text = (
+            "コアだけ少額分割を確認。サテライトは待つ。"
+            if has_core_recovery and not has_buy
+            else "買い候補を確認。即買いせず価格と比率を見る。"
+        )
     else:
         action_label = "🟡 WAIT"
         action_text = "本日の新規買い候補はありません。"
+        conclusion_text = "何もしない。条件が来るまで待つ。"
 
     buy_names = pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist() if has_buy else []
     sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
@@ -815,6 +823,7 @@ def write_decision_brief(
         f"{market_score}/100",
         "",
         action_label,
+        f"結論: {conclusion_text}",
         action_text,
         _action_label_meaning(action_label),
         "",
