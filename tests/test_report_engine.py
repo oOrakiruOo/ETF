@@ -840,6 +840,8 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
                     "遵守率%": 50.0,
                     "状態": "要確認",
                     "理由": "ルール破り1日",
+                    "目的達成判定": "要改善",
+                    "次週確認": "DEFENSEの日の買い急ぎを抑える",
                 }
             ]
         ),
@@ -854,6 +856,7 @@ def test_weekly_report_shows_manual_decision_summary(tmp_path) -> None:
     assert "### 自己確認ログ" in text
     assert "遵守率%" in text
     assert "ルール破り1日" in text
+    assert "DEFENSEの日の買い急ぎを抑える" in text
 
 
 def test_weekly_report_shows_previous_open_action_items(tmp_path) -> None:

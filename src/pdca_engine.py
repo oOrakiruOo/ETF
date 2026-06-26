@@ -197,6 +197,8 @@ def summarize_self_check_logs(self_checks: pd.DataFrame) -> pd.DataFrame:
                     "遵守率%": None,
                     "状態": "OK",
                     "理由": "自己確認ログなし",
+                    "目的達成判定": "未評価",
+                    "次週確認": "LINE通知後に 守れた / 破った / 保留 を記録",
                 }
             ]
         )
@@ -211,6 +213,15 @@ def summarize_self_check_logs(self_checks: pd.DataFrame) -> pd.DataFrame:
         reasons.append(f"ルール破り{broke}日")
     if pending:
         reasons.append(f"保留{pending}日")
+    if broke:
+        achievement = "要改善"
+        next_check = "破った日の理由を確認し、DEFENSE/WAITの日の買い急ぎを抑える"
+    elif pending:
+        achievement = "観察"
+        next_check = "保留日の迷いを言語化し、翌週の判断材料にする"
+    else:
+        achievement = "継続"
+        next_check = "現行ルールを維持し、買わない判断を継続"
     return pd.DataFrame(
         [
             {
@@ -221,6 +232,8 @@ def summarize_self_check_logs(self_checks: pd.DataFrame) -> pd.DataFrame:
                 "遵守率%": compliance_rate,
                 "状態": "要確認" if broke or pending else "OK",
                 "理由": "、".join(reasons) if reasons else "ルール遵守",
+                "目的達成判定": achievement,
+                "次週確認": next_check,
             }
         ]
     )
