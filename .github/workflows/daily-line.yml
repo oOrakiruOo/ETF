@@ -76,4 +76,5 @@ jobs:
             data/processed/signals/
             data/processed/notifications/
             data/processed/decisions/
+            data/processed/data_source_status.csv
           if-no-files-found: ignore

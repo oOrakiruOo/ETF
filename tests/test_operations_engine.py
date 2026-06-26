@@ -13,8 +13,8 @@ from src.operations_engine import (
 )
 
 
-def test_check_daily_artifacts_returns_expected_rows() -> None:
-    result = check_daily_artifacts(datetime(2099, 1, 1))
+def test_check_daily_artifacts_returns_expected_rows(tmp_path) -> None:
+    result = check_daily_artifacts(datetime(2099, 1, 1), project_root=tmp_path)
     assert set(result["成果物"]) == {
         "日次レポート",
         "携帯向け要約",
@@ -29,6 +29,7 @@ def test_check_daily_artifacts_returns_expected_rows() -> None:
         "日次通知パケット",
         "記録通知パケット",
         "シグナルCSV",
+        "データ取得元ステータス",
     }
     assert set(result["状態"]) == {"Missing"}
 
