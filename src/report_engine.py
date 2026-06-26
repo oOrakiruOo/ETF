@@ -1280,6 +1280,11 @@ def write_weekly_pdca_report(
     self_check_text = "自己確認ログなし"
     if self_check_summary is not None and not self_check_summary.empty:
         self_check_text = self_check_summary.to_markdown(index=False)
+        self_check_row = self_check_summary.iloc[0]
+        self_check_state = str(self_check_row.get("状態", ""))
+        self_check_next = str(self_check_row.get("次週確認", "")).strip()
+        if self_check_state == "要確認" and self_check_next:
+            action_items.append(self_check_next)
     if not best_parameters.empty:
         best = best_parameters.iloc[0]
         action_items.append(

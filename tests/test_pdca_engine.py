@@ -212,6 +212,8 @@ def test_append_and_summarize_self_check_logs(tmp_path) -> None:
     assert summary["遵守率%"] == 50.0
     assert summary["状態"] == "要確認"
     assert summary["理由"] == "ルール破り1日"
+    assert summary["目的達成判定"] == "要改善"
+    assert "買い急ぎ" in summary["次週確認"]
 
 
 def test_self_check_log_path_can_use_environment(monkeypatch, tmp_path) -> None:
