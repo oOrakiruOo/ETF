@@ -1,6 +1,7 @@
 param(
     [int]$Limit = 5,
-    [switch]$DownloadLatestArtifact
+    [switch]$DownloadLatestArtifact,
+    [switch]$Weekly
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,13 +10,21 @@ $OutputEncoding = [Text.UTF8Encoding]::new()
 
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Gh = "C:\Program Files\GitHub CLI\gh.exe"
-$Workflow = "Daily ETF LINE"
+$Workflow = if ($Weekly) { "Weekly ETF PDCA" } else { "Daily ETF LINE" }
+$ArtifactName = if ($Weekly) { "weekly-pdca-reports" } else { "daily-reports" }
+$ArtifactPrefix = if ($Weekly) { "actions-weekly-pdca" } else { "actions-daily-reports" }
+$LogPattern = if ($Weekly) {
+    "週次PDCA|軽量履歴再生|週次ヘルス|週次要約|line_delivery|failure alert|Artifact weekly-pdca-reports|failed"
+} else {
+    "日次レポート|LINEへ買い判断|line_delivery|failure alert|Artifact daily-reports|failed"
+}
 
 if (-not (Test-Path -LiteralPath $Gh)) {
     throw "GitHub CLI not found: $Gh"
 }
 
 Write-Host "ETF Rotation Cloud Delivery Check"
+Write-Host "Workflow: $Workflow"
 Write-Host ""
 
 Write-Host "[runs]"
@@ -36,11 +45,11 @@ $Latest | Format-List
 Write-Host ""
 Write-Host "[log-summary]"
 & $Gh run view $Latest.databaseId --log |
-    Select-String -Pattern "日次レポート|LINEへ買い判断|line_delivery|failure alert|Artifact daily-reports|failed" |
+    Select-String -Pattern $LogPattern |
     Select-Object -First 40
 
 if ($DownloadLatestArtifact) {
-    $OutputDir = Join-Path $ProjectRoot "tmp\actions-daily-reports-$($Latest.databaseId)"
+    $OutputDir = Join-Path $ProjectRoot "tmp\$ArtifactPrefix-$($Latest.databaseId)"
     Write-Host ""
     Write-Host "[download-artifact] $OutputDir"
     if (Test-Path -LiteralPath $OutputDir) {
@@ -51,6 +60,36 @@ if ($DownloadLatestArtifact) {
         }
         Remove-Item -LiteralPath $OutputDir -Recurse -Force
     }
-    & $Gh run download $Latest.databaseId -n daily-reports -D $OutputDir
+    & $Gh run download $Latest.databaseId -n $ArtifactName -D $OutputDir
     Get-ChildItem -Path $OutputDir -Recurse -File | Select-Object -First 30 FullName, Length
+
+    Write-Host ""
+    Write-Host "[check-these-first]"
+    $Patterns = if ($Weekly) {
+        @(
+            "reports\weekly\weekly_line_summary_*.txt",
+            "reports\weekly\weekly_health_*.md",
+            "reports\weekly\weekly_report_*.md",
+            "reports\weekly\replay_pdca_report_*.md",
+            "data\processed\line\line_delivery_log_*.csv"
+        )
+    } else {
+        @(
+            "reports\daily\decision_brief_*.txt",
+            "reports\daily\daily_report_*.md",
+            "data\processed\line\line_delivery_log_*.csv",
+            "data\processed\decisions\manual_decision_sheet_*.csv"
+        )
+    }
+    foreach ($Pattern in $Patterns) {
+        $Matched = Get-ChildItem -Path $OutputDir -Recurse -File |
+            Where-Object { $_.FullName -like "*$($Pattern.Replace('\', '*'))" } |
+            Sort-Object LastWriteTime |
+            Select-Object -Last 1
+        if ($Matched) {
+            Write-Host "- $($Matched.FullName)"
+        } else {
+            Write-Host "- missing: $Pattern"
+        }
+    }
 }
