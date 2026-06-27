@@ -9,6 +9,7 @@
 - 本運用前の安定化: 実装完了寄り
 - PCオフ運用: GitHub Actionsで実証済み
 - 日次LINE通知: schedule実行で連続成功中
+- 週次PDCA: workflow_dispatch成功確認済み
 
 ## 完了済み
 
@@ -27,6 +28,7 @@
 - 週次PDCAへの自己確認フィードバック追加
 - LINE判断ブリーフの一言結論追加
 - 価格データ取得元ステータスとキャッシュ退避を追加
+- Codex軽量タスクテンプレ追加
 
 ## 残タスク
 
@@ -36,7 +38,8 @@
    - `data_source_status.csv` がartifactに含まれる
 
 2. 初回の週次クラウドPDCA確認
-   - `Weekly ETF PDCA` が成功
+   - `Weekly ETF PDCA` の手動実行は成功済み
+   - 次回schedule実行が成功
    - 週次LINE要約が届く
    - `weekly_report` と `replay_pdca_report` がartifactに含まれる
 
