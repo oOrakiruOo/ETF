@@ -16,21 +16,6 @@ from .utils import ensure_dir
 LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push"
 LINE_BROADCAST_ENDPOINT = "https://api.line.me/v2/bot/message/broadcast"
 DEFAULT_LINE_DELIVERY_LOG_DIR = "data/processed/line"
-SELF_CHECK_REPLY_MAP = {
-    "守れた": "kept",
-    "まもれた": "kept",
-    "守った": "kept",
-    "ok": "kept",
-    "kept": "kept",
-    "破った": "broke",
-    "やぶった": "broke",
-    "破り": "broke",
-    "ng": "broke",
-    "broke": "broke",
-    "保留": "pending",
-    "あとで": "pending",
-    "pending": "pending",
-}
 
 
 def append_line_delivery_log(
@@ -88,50 +73,6 @@ def build_line_broadcast_payload(text: str) -> dict[str, Any]:
             }
         ],
     }
-
-
-def parse_self_check_reply(text: str) -> tuple[str, str] | None:
-    normalized = text.strip().lower()
-    if not normalized:
-        return None
-    for keyword, status in SELF_CHECK_REPLY_MAP.items():
-        if keyword in normalized:
-            return status, text.strip()
-    return None
-
-
-def extract_text_messages_from_webhook(payload: dict[str, Any]) -> list[str]:
-    messages: list[str] = []
-    events = payload.get("events")
-    if not isinstance(events, list):
-        return messages
-    for event in events:
-        if not isinstance(event, dict) or event.get("type") != "message":
-            continue
-        message = event.get("message")
-        if not isinstance(message, dict) or message.get("type") != "text":
-            continue
-        text = message.get("text")
-        if isinstance(text, str) and text.strip():
-            messages.append(text.strip())
-    return messages
-
-
-def extract_user_ids_from_webhook(payload: dict[str, Any]) -> list[str]:
-    user_ids: list[str] = []
-    events = payload.get("events")
-    if not isinstance(events, list):
-        return user_ids
-    for event in events:
-        if not isinstance(event, dict):
-            continue
-        source = event.get("source")
-        if not isinstance(source, dict):
-            continue
-        user_id = source.get("userId")
-        if isinstance(user_id, str) and user_id.startswith("U") and user_id not in user_ids:
-            user_ids.append(user_id)
-    return user_ids
 
 
 def _post_line_payload(payload: dict[str, Any], token: str, endpoint: str) -> int:

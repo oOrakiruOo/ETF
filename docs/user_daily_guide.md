@@ -103,20 +103,13 @@ LINEに表示されても、ETF通知だけで買い増ししません。
 
 ## 毎日の自己確認
 
-LINEを見た後、次のどれかをそのまま返信して記録します。
+LINE返信による自動記録は使いません。
+必要な日だけ、手動で自己確認を記録します。
 
-```text
-守れた
-破った 理由
-保留
-```
-
-例:
-
-```text
-守れた
-破った SOFIを見て買いたくなった
-保留
+```powershell
+.\scripts\run_workflow.ps1 -Command self-check -Status kept
+.\scripts\run_workflow.ps1 -Command self-check -Status broke -Reason "SOFIを見て買いたくなった"
+.\scripts\run_workflow.ps1 -Command self-check -Status pending -Reason "判断保留"
 ```
 
 この記録は週次PDCAで使います。
