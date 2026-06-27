@@ -27,6 +27,8 @@ ETFシステムでCodex使用量を増やしすぎないための運用ルール
 
 ## ETFシステムでCodexに投げる形
 
+具体テンプレートは `docs/codex_light_task_templates.md` を使います。
+
 ```text
 今回の作業範囲は1点だけ。
 
