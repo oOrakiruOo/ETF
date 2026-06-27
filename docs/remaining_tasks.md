@@ -5,7 +5,7 @@
 
 ## 現在地
 
-- 全体進捗: 約99.8%
+- 全体進捗: 約99.9%
 - 本運用前の安定化: 実装完了寄り
 - PCオフ運用: GitHub Actionsで実証済み
 - 日次LINE通知: schedule実行で連続成功中
@@ -48,6 +48,9 @@
    - `weekly_report` と `replay_pdca_report` のartifact格納は確認済み
    - schedule実行が成功
    - 週次LINE要約送信ログを確認済み
+   - LINE返信/Webhook削除後のworkflow_dispatch成功を確認済み
+   - 週次LINE要約送信ログHTTP 200を確認済み
+   - LINE返信/Webhook削除後の次回scheduleだけ最終観察
 
 3. 1週間運用後の自己確認反映
    - 必要な日だけ `self-check` で手動記録
@@ -71,7 +74,7 @@
 以下を満たしたら、本運用準備は100%と判定します。
 
 1. LINE返信/Webhook削除後も、平日の日次LINEがクラウドから届く（手動dispatchは確認済み、次回schedule待ち）
-2. LINE返信/Webhook削除後も、土曜の週次PDCA LINEがクラウドから届く
+2. LINE返信/Webhook削除後も、土曜の週次PDCA LINEがクラウドから届く（手動dispatchは確認済み、次回schedule待ち）
 3. 1週間分の自己確認が週次PDCAに反映される
 4. `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で日次成果物を確認できる（手動実行分は確認済み）
 5. `scripts/check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact` で週次成果物を確認できる（手動実行分は確認済み）
