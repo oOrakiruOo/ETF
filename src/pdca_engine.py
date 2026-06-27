@@ -198,7 +198,7 @@ def summarize_self_check_logs(self_checks: pd.DataFrame) -> pd.DataFrame:
                     "状態": "OK",
                     "理由": "自己確認ログなし",
                     "目的達成判定": "未評価",
-                    "次週確認": "LINE通知後に 守れた / 破った / 保留 を記録",
+                    "次週確認": "必要な場合だけself-checkで手動記録",
                 }
             ]
         )

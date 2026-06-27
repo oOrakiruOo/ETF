@@ -852,10 +852,10 @@ def write_decision_brief(
         lines.extend(["未来ショック備え:", *future_guard_lines, ""])
     lines.extend([
         "今日の自己確認:",
-        "LINEにそのまま返信:",
-        "守れた / 破った / 保留",
-        "例: 破った SOFIを見て買いたくなった",
-        "破った場合は週次PDCAで原因確認。",
+        "LINE返信での記録は使わない。",
+        "必要な場合だけ self-check で手動記録。",
+        "例: self-check broke / SOFIを見て買いたくなった",
+        "週次PDCAで原因確認。",
         "",
         "買い判断:",
         f"新規買い: {'あり' if has_buy else 'コア分割のみ確認' if has_core_recovery else 'なし'}",

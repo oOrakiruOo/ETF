@@ -228,7 +228,7 @@ PCオフ運用を優先する場合は、GitHub Actionsを使います。
 ```text
 config/      ETFユニバース、テーマ、リスク設定
 src/         実装本体
-scripts/     運用用PowerShell、Webhookサーバー
+scripts/     運用用PowerShell
 docs/        説明書、運用手順
 tests/       pytest
 reports/     日次・週次レポート生成物

@@ -9,8 +9,7 @@ LINE Notifyは2025年3月31日に終了済みのため使いません。
 2. Messaging APIチャネルを作成します。
 3. チャネルのQRコードから、自分のLINEでBotを友だち追加します。
 4. チャネルアクセストークンを発行します。
-5. 送信だけならWebhookは必須ではありません。
-6. LINE返信で `守れた / 破った / 保留` を記録する場合は、Webhook URLも設定します。
+5. 送信運用ではWebhookは不要です。
 
 ## 2. 必要な値
 
@@ -18,10 +17,6 @@ LINE Notifyは2025年3月31日に終了済みのため使いません。
   - Messaging APIチャネルの長期チャネルアクセストークン
 - `LINE_TO_USER_ID`
   - 送信先ユーザーID
-- `LINE_CHANNEL_SECRET`
-  - Webhook署名検証用のChannel secret
-  - 返信記録を使う場合にクラウド環境へ設定します
-
 秘密値はREADME、CSV、Gitに保存しません。
 
 ## 3. 一時設定して確認する
@@ -93,23 +88,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Codex\theme-etf-rotat
 - LINE送信はレポート共有だけです。
 - トークンを再発行した場合は、Windowsの環境変数やタスク実行環境も更新してください。
 
-## 7. LINE返信で自己確認を記録する
+## 7. 自己確認ログを手動で記録する
 
-Webhookを使う場合は、`docs/line_webhook_deploy_guide.md` に従ってWebhookサーバーを公開します。
+LINE返信による自動記録は使いません。
+必要な場合だけ、以下で手動記録します。
 
-LINE DevelopersのWebhook URLには以下を設定します。
-
-```text
-https://<公開URL>/line-webhook
+```powershell
+.\scripts\run_workflow.ps1 -Command self-check -Status kept
+.\scripts\run_workflow.ps1 -Command self-check -Status broke -Reason "SOFIを見て迷った"
+.\scripts\run_workflow.ps1 -Command self-check -Status pending -Reason "判断保留"
 ```
-
-Botへ以下のように返信すると、週次PDCAの自己確認ログに反映されます。
-
-```text
-守れた
-破った SOFIを見て迷った
-保留
-```
-
-クラウド側では `LINE_CHANNEL_SECRET` を設定してください。
-未設定でもローカル検証はできますが、本番では署名検証を有効にします。

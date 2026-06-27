@@ -36,11 +36,9 @@ from .indicators import add_indicators, latest_metrics
 from .line_engine import (
     append_line_delivery_log,
     check_line_settings,
-    parse_self_check_reply,
     send_line_broadcast_message,
     send_line_push_message,
 )
-from .line_webhook_engine import handle_line_webhook_payload
 from .notification_engine import (
     build_notification_candidates,
     build_portfolio_notification_candidates,
@@ -1014,45 +1012,6 @@ def run_self_check(status: str, reason: str = "") -> None:
     print(f"自己確認を記録しました: {output_path}")
 
 
-def run_line_self_check_reply(text: str) -> None:
-    setup_logging()
-    parsed = parse_self_check_reply(text)
-    if parsed is None:
-        print("自己確認として解釈できませんでした。守れた / 破った / 保留 のいずれかを含めてください。")
-        return
-    status, reason = parsed
-    output_path = append_self_check_log(status=status, reason=reason, source="line_reply")
-    logging.getLogger(__name__).info("LINE self check reply logged: %s status=%s", output_path, status)
-    print(f"LINE返信の自己確認を記録しました: {output_path}")
-
-
-def run_line_webhook_payload(payload_path: str) -> None:
-    setup_logging()
-    if not payload_path:
-        raise RuntimeError("--payload が未指定です。LINE Webhook JSONファイルを指定してください。")
-    payload_file = Path(payload_path)
-    payload = json.loads(payload_file.read_text(encoding="utf-8"))
-    result = handle_line_webhook_payload(payload)
-    logging.getLogger(__name__).info("LINE webhook payload handled: %s", result)
-    print(f"LINE Webhookを処理しました: {result}")
-
-
-def run_line_user_ids() -> None:
-    setup_logging()
-    path = PROJECT_ROOT / "data" / "processed" / "line" / "line_user_ids.csv"
-    if not path.exists():
-        print(f"LINEユーザーIDはまだ保存されていません: {path}")
-        print("LINE公式アカウントに一言送信し、Webhookを受信してください。")
-        return
-    frame = pd.read_csv(path).fillna("")
-    if frame.empty or "user_id" not in frame.columns:
-        print(f"LINEユーザーIDはまだ保存されていません: {path}")
-        return
-    print(f"LINEユーザーID保存先: {path}")
-    for user_id in frame["user_id"].astype(str).tolist():
-        print(user_id)
-
-
 def run_line_broadcast_weekly_summary() -> None:
     setup_logging()
     output_path = _write_weekly_line_summary()
@@ -1680,9 +1639,6 @@ def main() -> None:
             "weekly-line-summary",
             "user-friction-sim",
             "self-check",
-            "line-self-check-reply",
-            "line-webhook-payload",
-            "line-user-ids",
             "portfolio-check",
             "notification-summary",
             "notification-plan",
@@ -1711,8 +1667,6 @@ def main() -> None:
     parser.add_argument("--profile", default=DEFAULT_STRATEGY_PROFILE, help="strategy_profiles.yamlのプロファイル名")
     parser.add_argument("--status", default="kept", help="self-check用: kept/broke/pending")
     parser.add_argument("--reason", default="", help="self-check用: 破った理由やメモ")
-    parser.add_argument("--text", default="", help="line-self-check-reply用: LINE返信本文")
-    parser.add_argument("--payload", default="", help="line-webhook-payload用: LINE Webhook JSONファイル")
     args = parser.parse_args()
     if args.command == "refine":
         run_refine(refresh=args.refresh)
@@ -1730,12 +1684,6 @@ def main() -> None:
         run_user_friction_simulation()
     elif args.command == "self-check":
         run_self_check(status=args.status, reason=args.reason)
-    elif args.command == "line-self-check-reply":
-        run_line_self_check_reply(text=args.text)
-    elif args.command == "line-webhook-payload":
-        run_line_webhook_payload(payload_path=args.payload)
-    elif args.command == "line-user-ids":
-        run_line_user_ids()
     elif args.command == "portfolio-check":
         run_portfolio_check()
     elif args.command == "notification-summary":
