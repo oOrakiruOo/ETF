@@ -1,7 +1,8 @@
 param(
     [int]$Limit = 5,
     [switch]$DownloadLatestArtifact,
-    [switch]$Weekly
+    [switch]$Weekly,
+    [switch]$RequireSuccess
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,6 +42,13 @@ if (-not $Latest) {
 Write-Host ""
 Write-Host "[latest]"
 $Latest | Format-List
+
+if ($RequireSuccess -and $Latest.status -ne "completed") {
+    throw "$Workflow latest run is not completed: status=$($Latest.status)"
+}
+if ($RequireSuccess -and $Latest.conclusion -ne "success") {
+    throw "$Workflow latest run is not success: conclusion=$($Latest.conclusion)"
+}
 
 Write-Host ""
 Write-Host "[log-summary]"

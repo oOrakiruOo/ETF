@@ -26,6 +26,12 @@ GitHub Actionsの最新結果を確認する場合は、以下を使います。
 .\scripts\check_cloud_delivery.ps1
 ```
 
+成功していない場合に止めたい確認では、以下を使います。
+
+```powershell
+.\scripts\check_cloud_delivery.ps1 -RequireSuccess
+```
+
 成果物まで確認する場合は、以下を使います。
 
 ```powershell
@@ -33,6 +39,11 @@ GitHub Actionsの最新結果を確認する場合は、以下を使います。
 ```
 
 `Daily ETF LINE` が `success` で、LINEに判断ブリーフが届いていれば日次運用は完了です。
+週次PDCAを確認する場合は、以下を使います。
+
+```powershell
+.\scripts\check_cloud_delivery.ps1 -Weekly -RequireSuccess
+```
 
 ## 3. PCから手動実行する場合
 
