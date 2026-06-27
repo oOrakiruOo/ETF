@@ -20,6 +20,18 @@
 
 ## 2. クラウド実行確認
 
+日次と週次をまとめて確認する場合は、以下を使います。
+
+```powershell
+.\scripts\check_go_live_cloud.ps1
+```
+
+成果物までまとめて確認する場合は、以下を使います。
+
+```powershell
+.\scripts\check_go_live_cloud.ps1 -DownloadArtifacts
+```
+
 GitHub Actionsの最新結果を確認する場合は、以下を使います。
 
 ```powershell
