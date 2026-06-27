@@ -79,6 +79,18 @@ Codexでは実装だけ行ってください。
 
 ## 副業リポジトリ用
 
+最初の軽い雛形は以下で作れます。
+
+```powershell
+.\scripts\create_side_project_scaffold.ps1
+```
+
+別の場所に作る場合:
+
+```powershell
+.\scripts\create_side_project_scaffold.ps1 -ProjectPath D:\Codex\ai-content-factory
+```
+
 ```text
 新規の軽いリポジトリで作業します。
 ETFシステムの文脈は使わないでください。
