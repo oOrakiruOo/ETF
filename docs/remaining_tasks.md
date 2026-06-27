@@ -10,6 +10,7 @@
 - PCオフ運用: GitHub Actionsで実証済み
 - 日次LINE通知: schedule実行で連続成功中
 - 週次PDCA: workflow_dispatch成功確認済み
+- 日次/週次artifact: 手動dispatch分の必要ファイル確認済み
 
 ## 完了済み
 
@@ -29,21 +30,22 @@
 - LINE判断ブリーフの一言結論追加
 - 価格データ取得元ステータスとキャッシュ退避を追加
 - Codex軽量タスクテンプレ追加
+- 日次/週次クラウドartifact確認
 
 ## 残タスク
 
 1. 次回の日次クラウド実行確認
-   - `Daily ETF LINE` が成功
-   - LINEが届く
-   - `data_source_status.csv` がartifactに含まれる
+   - 手動実行は成功済み
+   - `data_source_status.csv` のartifact格納は確認済み
+   - 次回schedule実行が成功
 
 2. 初回の週次クラウドPDCA確認
    - `Weekly ETF PDCA` の手動実行は成功済み
+   - `weekly_report` と `replay_pdca_report` のartifact格納は確認済み
    - 次回schedule実行が成功
    - 週次LINE要約が届く
-   - `weekly_report` と `replay_pdca_report` がartifactに含まれる
 
-3. 1週間運用後の実データ確認
+3. 1週間運用後の自己確認反映
    - `守れた / 破った / 保留`
    - DEFENSE日に買い急ぎを止められたか
    - CHECK BUYが実際に判断しやすかったか
@@ -66,8 +68,8 @@
 1. 平日の日次LINEがクラウドから届く
 2. 土曜の週次PDCA LINEがクラウドから届く
 3. 1週間分の自己確認が週次PDCAに反映される
-4. `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で日次成果物を確認できる
-5. `scripts/check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact` で週次成果物を確認できる
+4. `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で日次成果物を確認できる（手動実行分は確認済み）
+5. `scripts/check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact` で週次成果物を確認できる（手動実行分は確認済み）
 
 ## 当面の最優先
 
