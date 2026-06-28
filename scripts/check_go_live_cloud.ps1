@@ -1,6 +1,7 @@
 param(
     [switch]$DownloadArtifacts,
-    [switch]$ScheduleOnly
+    [switch]$ScheduleOnly,
+    [double]$MaxAgeHours = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,6 +21,9 @@ $DailyArgs = @{
 if ($ScheduleOnly) {
     $DailyArgs.Event = "schedule"
 }
+if ($MaxAgeHours -gt 0) {
+    $DailyArgs.MaxAgeHours = $MaxAgeHours
+}
 if ($DownloadArtifacts) {
     $DailyArgs.DownloadLatestArtifact = $true
 }
@@ -33,6 +37,9 @@ $WeeklyArgs = @{
 }
 if ($ScheduleOnly) {
     $WeeklyArgs.Event = "schedule"
+}
+if ($MaxAgeHours -gt 0) {
+    $WeeklyArgs.MaxAgeHours = $MaxAgeHours
 }
 if ($DownloadArtifacts) {
     $WeeklyArgs.DownloadLatestArtifact = $true

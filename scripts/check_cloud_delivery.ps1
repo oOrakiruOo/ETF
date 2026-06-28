@@ -4,7 +4,8 @@ param(
     [switch]$Weekly,
     [switch]$RequireSuccess,
     [ValidateSet("any", "schedule", "workflow_dispatch")]
-    [string]$Event = "any"
+    [string]$Event = "any",
+    [double]$MaxAgeHours = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,6 +30,9 @@ if (-not (Test-Path -LiteralPath $Gh)) {
 Write-Host "ETF Rotation Cloud Delivery Check"
 Write-Host "Workflow: $Workflow"
 Write-Host "Event: $Event"
+if ($MaxAgeHours -gt 0) {
+    Write-Host "MaxAgeHours: $MaxAgeHours"
+}
 Write-Host ""
 
 Write-Host "[runs]"
@@ -56,6 +60,13 @@ if ($RequireSuccess -and $Latest.status -ne "completed") {
 }
 if ($RequireSuccess -and $Latest.conclusion -ne "success") {
     throw "$Workflow latest run is not success: conclusion=$($Latest.conclusion)"
+}
+if ($MaxAgeHours -gt 0) {
+    $CreatedAt = [DateTimeOffset]::Parse($Latest.createdAt)
+    $AgeHours = ([DateTimeOffset]::UtcNow - $CreatedAt.ToUniversalTime()).TotalHours
+    if ($AgeHours -gt $MaxAgeHours) {
+        throw "$Workflow latest $Event run is too old: ageHours=$([Math]::Round($AgeHours, 1)) maxAgeHours=$MaxAgeHours"
+    }
 }
 
 Write-Host ""

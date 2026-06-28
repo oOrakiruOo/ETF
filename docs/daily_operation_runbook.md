@@ -38,6 +38,12 @@
 .\scripts\check_go_live_cloud.ps1 -ScheduleOnly
 ```
 
+古い成功runを除外して確認する場合は、以下を使います。
+
+```powershell
+.\scripts\check_go_live_cloud.ps1 -ScheduleOnly -MaxAgeHours 168
+```
+
 GitHub Actionsの最新結果を確認する場合は、以下を使います。
 
 ```powershell
