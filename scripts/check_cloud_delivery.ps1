@@ -2,7 +2,9 @@ param(
     [int]$Limit = 5,
     [switch]$DownloadLatestArtifact,
     [switch]$Weekly,
-    [switch]$RequireSuccess
+    [switch]$RequireSuccess,
+    [ValidateSet("any", "schedule", "workflow_dispatch")]
+    [string]$Event = "any"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,13 +28,19 @@ if (-not (Test-Path -LiteralPath $Gh)) {
 
 Write-Host "ETF Rotation Cloud Delivery Check"
 Write-Host "Workflow: $Workflow"
+Write-Host "Event: $Event"
 Write-Host ""
 
 Write-Host "[runs]"
 & $Gh run list --workflow $Workflow --limit $Limit
 
-$LatestJson = & $Gh run list --workflow $Workflow --limit 1 --json databaseId,conclusion,status,event,createdAt,updatedAt,url
-$Latest = $LatestJson | ConvertFrom-Json | Select-Object -First 1
+$RunListJson = & $Gh run list --workflow $Workflow --limit 20 --json databaseId,conclusion,status,event,createdAt,updatedAt,url
+$Runs = @($RunListJson | ConvertFrom-Json)
+$Latest = if ($Event -eq "any") {
+    $Runs | Select-Object -First 1
+} else {
+    $Runs | Where-Object { $_.event -eq $Event } | Select-Object -First 1
+}
 if (-not $Latest) {
     Write-Host ""
     Write-Host "[latest] missing"

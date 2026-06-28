@@ -1,5 +1,6 @@
 param(
-    [switch]$DownloadArtifacts
+    [switch]$DownloadArtifacts,
+    [switch]$ScheduleOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,19 +14,30 @@ Write-Host "ETF Rotation Go-Live Cloud Check"
 Write-Host ""
 
 Write-Host "1/2 Daily ETF LINE"
-$DailyArgs = @("-File", $CloudCheck, "-RequireSuccess")
-if ($DownloadArtifacts) {
-    $DailyArgs += "-DownloadLatestArtifact"
+$DailyArgs = @{
+    RequireSuccess = $true
 }
-& powershell.exe -NoProfile -ExecutionPolicy Bypass @DailyArgs
+if ($ScheduleOnly) {
+    $DailyArgs.Event = "schedule"
+}
+if ($DownloadArtifacts) {
+    $DailyArgs.DownloadLatestArtifact = $true
+}
+& $CloudCheck @DailyArgs
 
 Write-Host ""
 Write-Host "2/2 Weekly ETF PDCA"
-$WeeklyArgs = @("-File", $CloudCheck, "-Weekly", "-RequireSuccess")
-if ($DownloadArtifacts) {
-    $WeeklyArgs += "-DownloadLatestArtifact"
+$WeeklyArgs = @{
+    Weekly = $true
+    RequireSuccess = $true
 }
-& powershell.exe -NoProfile -ExecutionPolicy Bypass @WeeklyArgs
+if ($ScheduleOnly) {
+    $WeeklyArgs.Event = "schedule"
+}
+if ($DownloadArtifacts) {
+    $WeeklyArgs.DownloadLatestArtifact = $true
+}
+& $CloudCheck @WeeklyArgs
 
 Write-Host ""
 Write-Host "Go-live cloud check completed."
