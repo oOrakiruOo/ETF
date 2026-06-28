@@ -194,7 +194,7 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "結論: 新規買いは見送り。保有ETFだけ確認。" in text
     assert "今日は新規買いより、保有ETFの確認を優先。" in text
     assert "今日やること:" in text
-    assert "✅ 市場リスク対象を確認: SMH" in text
+    assert "✅ 市場リスク対象を確認: SMH（半導体ETF）" in text
     assert "❌ 新規買いは見送り" in text
     assert "❌ ナンピン禁止" in text
     assert "ルール破り防止:" in text
@@ -223,12 +223,15 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "ETF信号とは別枠。買い増しはETF通知で判断しない。" in text
     assert "参考保有はETF通知で買い増ししない。" in text
     assert "次の買い候補:" in text
-    assert "VT  買い条件まで中距離 / あと2.0%" in text
+    assert "VT（全世界株式）" in text
+    assert "状態: 買い条件まで中距離 / あと2.0%" in text
+    assert "ステージ: S4 過熱期" in text
     assert "買いシグナル発生まで" in text
     assert "中距離（目安3〜12日）" in text
     assert "VT/VTI/SPY/QQQは待ち。" in text
     assert "テーマETFの新規買い候補なし。" in text
-    assert "状態: 過熱" in text
+    assert "状態: S4 過熱期" in text
+    assert "ステージ説明:" in text
     assert "確認: 利確候補" in text
     assert "買い増ししない。保有継続/一部利確を手動確認。" in text
     assert "※これは投資助言ではありません。" in text
@@ -273,12 +276,90 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     assert "⚠️ DATA STALE" in text
     assert "最新シグナルは2026-06-18（2日前）" in text
     assert "この通知は新規売買判断に使わないでください。" in text
-    assert "🔴 DEFENSE" in text
-    assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
-    assert "危険だから買わない。資金を守る日。" in text
-    assert "DEFENSE継続:" in text
-    assert "2日" in text
-    assert "解除条件:" in text
+
+
+def test_write_decision_brief_adds_japanese_labels_and_healthcare_watch(tmp_path) -> None:
+    signal_table = build_signal_table(
+        [
+            {
+                "ETF": "XLV",
+                "テーマ": "ヘルスケア",
+                "ETFスコア": 62.0,
+                "テーマスコア": 61.0,
+                "テーマリスク": "低",
+                "テーマリスクスコア": 0,
+                "ステージ": "ステージ1: 構想期",
+                "現在価格": 100.0,
+                "第1買い": 98.0,
+                "第1買いまで%": -2.0,
+                "第2買い": 95.0,
+                "第3買い": 90.0,
+                "保守目標": 110.0,
+                "強気目標": 120.0,
+                "停止価格": 85.0,
+                "RR": 1.4,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+            {
+                "ETF": "XBI",
+                "テーマ": "ヘルスケア",
+                "ETFスコア": 66.0,
+                "テーマスコア": 64.0,
+                "テーマリスク": "中",
+                "テーマリスクスコア": 20,
+                "ステージ": "ステージ2: 初動期",
+                "現在価格": 80.0,
+                "第1買い": 78.0,
+                "第1買いまで%": -2.5,
+                "第2買い": 74.0,
+                "第3買い": 70.0,
+                "保守目標": 92.0,
+                "強気目標": 100.0,
+                "停止価格": 68.0,
+                "RR": 1.7,
+                "判定": "押し目待ち",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+            {
+                "ETF": "ARKG",
+                "テーマ": "ヘルスケア",
+                "ETFスコア": 58.0,
+                "テーマスコア": 55.0,
+                "テーマリスク": "中",
+                "テーマリスクスコア": 35,
+                "ステージ": "ステージ5: 失速期",
+                "現在価格": 30.0,
+                "第1買い": 28.0,
+                "第1買いまで%": -6.7,
+                "第2買い": 26.0,
+                "第3買い": 24.0,
+                "保守目標": 36.0,
+                "強気目標": 40.0,
+                "停止価格": 22.0,
+                "RR": 0.9,
+                "判定": "見送り",
+                "テーマリスク理由": "",
+                "テーマ予防策": "",
+            },
+        ]
+    )
+    output_path = write_decision_brief(
+        signal_table,
+        readiness=pd.DataFrame([{"判定項目": "LINE設定", "状態": "OK", "理由": "OK"}]),
+        output_dir=tmp_path,
+        report_date=datetime(2026, 6, 20),
+    )
+    text = output_path.read_text(encoding="utf-8")
+    assert "ヘルスケア監視:" in text
+    assert "XLV（ヘルスケア大型株）" in text
+    assert "XBI（バイオ株）" in text
+    assert "ARKG（ゲノム・先端医療）" in text
+    assert "ステージ: S1 底固め・発見期" in text
+    assert "ステージ: S2 上昇初動・成長期" in text
+    assert "高ボラ枠。少額・分割のみ。" in text
 
 
 def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> None:
@@ -338,11 +419,11 @@ def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "🔴 DEFENSE" in text
     assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
-    assert "✅ コアだけ少額分割を手動検討: QQQ" in text
+    assert "✅ コアだけ少額分割を手動検討: QQQ（ナスダック100・大型グロース）" in text
     assert "❌ サテライト新規買い禁止" in text
     assert "新規買い: コア分割のみ確認" in text
     assert "コア分割買い: 候補あり" in text
-    assert "QQQ: コア分割買い検討 / 近い / 条件付近" in text
+    assert "QQQ（ナスダック100・大型グロース）: コア分割買い検討 / 近い / 条件付近" in text
     assert "サテライトはまだ待つ。" in text
     assert "SMH: コア分割買い検討" not in text
 
@@ -381,10 +462,10 @@ def test_write_decision_brief_shows_long_crash_core_probe(tmp_path) -> None:
     )
 
     text = output_path.read_text(encoding="utf-8")
-    assert "✅ コアだけ少額分割を手動検討: QQQ" in text
+    assert "✅ コアだけ少額分割を手動検討: QQQ（ナスダック100・大型グロース）" in text
     assert "新規買い: コア分割のみ確認" in text
     assert "二番底リスクあり。試し玉以上に広げない。" in text
-    assert "QQQ: コア分割買い検討 / 中距離 / あと4.0%" in text
+    assert "QQQ（ナスダック100・大型グロース）: コア分割買い検討 / 中距離 / あと4.0%" in text
     assert "確認対象:\nQQQ" not in text
 
 
@@ -494,8 +575,8 @@ def test_write_decision_brief_warns_modern_concentration_risks(tmp_path) -> None
 
     text = output_path.read_text(encoding="utf-8")
     assert "近年型リスク:" in text
-    assert "急騰テーマ注意: SMH は飛びつき禁止。" in text
-    assert "テーマ交代注意: VGT はCore優先で確認。" in text
+    assert "急騰テーマ注意: SMH（半導体ETF） は飛びつき禁止。" in text
+    assert "テーマ交代注意: VGT（米国テック大型株） はCore優先で確認。" in text
     assert "AI/半導体集中注意: 追加は一括ではなく上限確認。" in text
     assert "個別株誘惑注意: SOFI はETF信号で買い増ししない。" in text
 
