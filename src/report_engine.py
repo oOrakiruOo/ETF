@@ -148,6 +148,99 @@ def _mobile_value(value: object) -> str:
     return str(value)
 
 
+ETF_LABELS = {
+    "SPY": "S&P500",
+    "VTI": "米国株式全体",
+    "VT": "全世界株式",
+    "QQQ": "ナスダック100・大型グロース",
+    "VGT": "米国テック大型株",
+    "SMH": "半導体ETF",
+    "SOXX": "半導体ETF",
+    "SOXL": "半導体3倍レバレッジ",
+    "CIBR": "サイバーセキュリティ",
+    "HACK": "サイバーセキュリティ",
+    "BUG": "サイバーセキュリティ",
+    "XLV": "ヘルスケア大型株",
+    "VHT": "ヘルスケア全体",
+    "IYH": "米国ヘルスケア",
+    "IHI": "医療機器",
+    "XBI": "バイオ株",
+    "IBB": "大型バイオ",
+    "ARKG": "ゲノム・先端医療",
+    "XLE": "エネルギー株",
+    "XLF": "金融株",
+    "XLU": "公益株・電力",
+    "GRID": "電力・送配電インフラ",
+    "PAVE": "米国インフラ",
+    "ITA": "防衛・航空宇宙",
+    "BOTZ": "ロボティクス・AI",
+    "ROBO": "ロボティクス",
+    "AIQ": "AI関連株",
+    "ICLN": "クリーンエネルギー",
+    "QCLN": "次世代クリーンエネルギー",
+    "LIT": "リチウム・電池",
+    "DRIV": "EV・自動運転",
+    "URA": "ウラン・原子力",
+    "ARKX": "宇宙関連",
+    "UFO": "宇宙関連",
+}
+
+STAGE_LABELS = {
+    1: "S1 底固め・発見期",
+    2: "S2 上昇初動・成長期",
+    3: "S3 人気化・保有期",
+    4: "S4 過熱期",
+    5: "S5 失速期",
+}
+
+STAGE_ACTIONS = {
+    1: "監視開始。大きく買わない。",
+    2: "買い候補。分割買い候補。",
+    3: "保有中心。新規買いは慎重。",
+    4: "買い増し禁止。一部利確候補。",
+    5: "新規買い禁止。売却・縮小候補。",
+}
+
+HEALTHCARE_WATCH_TICKERS = {"XLV", "VHT", "IYH", "IHI", "XBI", "IBB", "ARKG"}
+REFERENCE_STOCK_TICKERS = {"TDK", "SOFI", "HIMS", "OSCR"}
+
+
+def _ticker_symbol(value: object) -> str:
+    return _mobile_value(value).strip().upper()
+
+
+def _ticker_label(value: object) -> str:
+    ticker = _ticker_symbol(value)
+    label = ETF_LABELS.get(ticker)
+    if not ticker or ticker == "-":
+        return "-"
+    if not label:
+        return ticker
+    return f"{ticker}（{label}）"
+
+
+def _stage_number(stage: object) -> int | None:
+    text = _mobile_value(stage)
+    for number in range(1, 6):
+        if f"ステージ{number}" in text or f"S{number}" in text:
+            return number
+    return None
+
+
+def _stage_display(stage: object) -> str:
+    number = _stage_number(stage)
+    if number is None:
+        return _mobile_value(stage).replace("ステージ", "S")
+    return STAGE_LABELS[number]
+
+
+def _stage_action(stage: object) -> str:
+    number = _stage_number(stage)
+    if number is None:
+        return "手動確認。"
+    return STAGE_ACTIONS[number]
+
+
 def write_mobile_summary(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
@@ -317,8 +410,8 @@ def write_user_friction_simulation_report(
 
 def _format_signal_row(row: dict[str, object]) -> str:
     return (
-        f"{_mobile_value(row.get('ETF'))}: {_mobile_value(row.get('判定'))} "
-        f"/ {_mobile_value(row.get('ステージ')).replace('ステージ', 'S')} "
+        f"{_ticker_label(row.get('ETF'))}: {_mobile_value(row.get('判定'))} "
+        f"/ {_stage_display(row.get('ステージ'))} "
         f"/ 買い差{_mobile_value(row.get('第1買いまで%'))}% "
         f"/ RR{_mobile_value(row.get('RR'))} "
         f"/ リスク{_mobile_value(row.get('テーマリスク'))}"
@@ -341,9 +434,8 @@ def _stage_label(stage: object) -> str:
 
 
 def _short_detail(row: dict[str, object]) -> str:
-    stage = _mobile_value(row.get("ステージ")).replace("ステージ", "S")
     return (
-        f"{_mobile_value(row.get('ETF'))}: {stage} / "
+        f"{_ticker_label(row.get('ETF'))}: {_stage_display(row.get('ステージ'))} / "
         f"RR{_mobile_value(row.get('RR'))} / "
         f"買い差 {_mobile_value(row.get('第1買いまで%'))}% / "
         f"リスク{_mobile_value(row.get('テーマリスク'))}"
@@ -557,11 +649,11 @@ def _modern_market_guard_lines(
             & (pd.to_numeric(signal_table["ETFスコア"], errors="coerce").fillna(0.0) >= 75.0)
         ]
         if not hot_rows.empty:
-            names = hot_rows["ETF"].astype(str).head(3).tolist()
+            names = [_ticker_label(item) for item in hot_rows["ETF"].astype(str).head(3).tolist()]
             lines.append(f"急騰テーマ注意: {', '.join(names)} は飛びつき禁止。")
         high_risk_rows = signal_table[signal_table["テーマリスク"].astype(str).eq("高")]
         if not high_risk_rows.empty:
-            names = high_risk_rows["ETF"].astype(str).head(3).tolist()
+            names = [_ticker_label(item) for item in high_risk_rows["ETF"].astype(str).head(3).tolist()]
             lines.append(f"テーマ交代注意: {', '.join(names)} はCore優先で確認。")
         ai_rows = signal_table[
             signal_table["テーマ"].astype(str).str.contains("AI|半導体|テクノロジ", case=False, na=False)
@@ -580,9 +672,23 @@ def _modern_market_guard_lines(
         if not reference_rows.empty:
             reference_rows["weight_pct"] = weights.loc[reference_rows.index]
             large_reference = reference_rows[reference_rows["weight_pct"] >= 10.0]
+            large_reference_names: set[str] = set()
             if not large_reference.empty:
                 names = [_holding_name(row) for row in large_reference.head(3).to_dict("records")]
+                large_reference_names = set(names)
                 lines.append(f"個別株誘惑注意: {', '.join(names)} はETF信号で買い増ししない。")
+            reference_stock_names: list[str] = []
+            reference_stock_rows = reference_rows[
+                reference_rows["ticker"].astype(str).str.upper().isin(REFERENCE_STOCK_TICKERS)
+            ] if "ticker" in reference_rows.columns else pd.DataFrame()
+            if not reference_stock_rows.empty:
+                reference_stock_names = [
+                    name
+                    for name in [_holding_name(row) for row in reference_stock_rows.head(4).to_dict("records")]
+                    if name not in large_reference_names
+                ]
+            if reference_stock_names:
+                lines.append(f"参考個別株注意: {', '.join(reference_stock_names)} はETF信号で買い増ししない。")
     return lines[:limit]
 
 
@@ -697,15 +803,15 @@ def write_decision_brief(
         action_text = "本日の新規買い候補はありません。"
         conclusion_text = "何もしない。条件が来るまで待つ。"
 
-    buy_names = pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist() if has_buy else []
-    sell_names = risk_review["ETF"].astype(str).head(3).tolist() if has_sell_check else []
-    held_sell_names = held_risk_review["ETF"].astype(str).head(3).tolist() if not held_risk_review.empty else []
+    buy_names = [_ticker_label(item) for item in pd.concat([core_buy, satellite_buy])["ETF"].astype(str).head(3).tolist()] if has_buy else []
+    sell_names = [_ticker_label(item) for item in risk_review["ETF"].astype(str).head(3).tolist()] if has_sell_check else []
+    held_sell_names = [_ticker_label(item) for item in held_risk_review["ETF"].astype(str).head(3).tolist()] if not held_risk_review.empty else []
     today_actions = []
     mistake_guard_lines = ["上がっても飛びつかない。", "下がってもナンピンしない。"]
     if defense:
         today_actions.append("✅ 積立だけ通常ルールで継続")
         if has_core_recovery:
-            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            recovery_names = [_ticker_label(item) for item in core_recovery["ETF"].astype(str).head(3).tolist()]
             today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
         if held_sell_names:
             today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
@@ -720,7 +826,7 @@ def write_decision_brief(
         today_actions.append("❌ 過熱・失速銘柄の追い買い禁止")
     elif has_sell_check:
         if has_core_recovery:
-            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            recovery_names = [_ticker_label(item) for item in core_recovery["ETF"].astype(str).head(3).tolist()]
             today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
         if held_sell_names:
             today_actions.append(f"✅ 保有ETFを確認: {', '.join(held_sell_names)}")
@@ -730,7 +836,7 @@ def write_decision_brief(
         today_actions.append("❌ ナンピン禁止")
     elif has_buy or has_core_recovery:
         if has_core_recovery and not has_buy:
-            recovery_names = core_recovery["ETF"].astype(str).head(3).tolist()
+            recovery_names = [_ticker_label(item) for item in core_recovery["ETF"].astype(str).head(3).tolist()]
             today_actions.append(f"✅ コアだけ少額分割を手動検討: {', '.join(recovery_names)}")
             today_actions.append("❌ サテライト新規買い禁止")
         else:
@@ -751,6 +857,8 @@ def write_decision_brief(
         reason_lines.append("新規買いより保有確認を優先")
     if defense:
         reason_lines.append("リスク確認を優先")
+        if has_buy or not watch_candidates.empty:
+            reason_lines.append("買い条件に近い銘柄はあるがDEFENSE解除まで買わない")
     if has_core_recovery:
         reason_lines.append("コアは少額分割の確認余地あり")
     if data_stale:
@@ -885,6 +993,27 @@ def write_decision_brief(
                 "",
             ]
         )
+    healthcare_watch = signal_table[
+        signal_table["ETF"].astype(str).str.upper().isin(HEALTHCARE_WATCH_TICKERS)
+    ].copy()
+    if not healthcare_watch.empty:
+        lines.extend(["ヘルスケア監視:"])
+        for row in healthcare_watch.head(5).to_dict("records"):
+            ticker = _ticker_symbol(row.get("ETF"))
+            if ticker in {"XLV", "VHT", "IYH"}:
+                judgement = "守備的な次候補。半導体から資金が抜ける場合に確認。"
+            elif ticker in {"XBI", "ARKG"}:
+                judgement = "高ボラ枠。少額・分割のみ。"
+            else:
+                judgement = "成長寄り候補。DEFENSE時は買わない。"
+            lines.extend(
+                [
+                    _ticker_label(row.get("ETF")),
+                    f"ステージ: {_stage_display(row.get('ステージ'))}",
+                    f"判断: {judgement}",
+                ]
+            )
+        lines.append("")
     lines.extend([
         "次の買い候補:",
     ])
@@ -892,7 +1021,11 @@ def write_decision_brief(
         lines.append("なし")
     else:
         for row in watch_candidates.to_dict("records"):
-            lines.append(f"{_mobile_value(row.get('ETF'))}  買い条件まで{_buy_distance_detail(row)}")
+            lines.append(f"{_ticker_label(row.get('ETF'))}")
+            lines.append(f"状態: 買い条件まで{_buy_distance_detail(row)}")
+            lines.append(f"ステージ: {_stage_display(row.get('ステージ'))}")
+            decision_text = "DEFENSE解除まで待ち" if defense else _stage_action(row.get("ステージ"))
+            lines.append(f"判断: {decision_text}")
     lines.extend(
         [
             "",
@@ -908,7 +1041,7 @@ def write_decision_brief(
         lines.append("暴落後の回復確認。買う場合も一括ではなく少額分割。")
         lines.append("二番底リスクあり。試し玉以上に広げない。")
         for row in core_recovery.to_dict("records"):
-            lines.append(f"{_mobile_value(row.get('ETF'))}: コア分割買い検討 / {_buy_distance_detail(row)}")
+            lines.append(f"{_ticker_label(row.get('ETF'))}: コア分割買い検討 / {_buy_distance_detail(row)}")
         lines.append("サテライトはまだ待つ。")
     elif core_buy.empty and core_wait.empty:
         lines.append("VT/VTI/SPY/QQQは待ち。")
@@ -927,9 +1060,9 @@ def write_decision_brief(
         lines.append("")
         lines.append("確認対象:")
         for row in risk_review.head(4).to_dict("records"):
-            ticker = _mobile_value(row.get("ETF"))
+            ticker = _ticker_label(row.get("ETF"))
             signal = _mobile_value(row.get("判定"))
-            stage = _stage_label(row.get("ステージ"))
+            stage = _stage_display(row.get("ステージ"))
             if signal == "利確候補":
                 action = "買い増ししない。保有継続/一部利確を手動確認。"
             elif signal == "売却候補":
@@ -948,6 +1081,17 @@ def write_decision_brief(
         for row in risk_review.head(4).to_dict("records"):
             lines.append(_short_detail(row))
 
+    lines.extend(
+        [
+            "",
+            "ステージ説明:",
+            "S1 底固め・発見期: 監視開始。大きく買わない。",
+            "S2 上昇初動・成長期: 買い候補。分割買い候補。",
+            "S3 人気化・保有期: 保有中心。新規買いは慎重。",
+            "S4 過熱期: 買い増し禁止。一部利確候補。",
+            "S5 失速期: 新規買い禁止。売却・縮小候補。",
+        ]
+    )
     lines.extend(["", "※これは投資助言ではありません。最終判断はご自身で行ってください。"])
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return output_path

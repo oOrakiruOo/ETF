@@ -51,7 +51,25 @@ satellite:
     label: 金融
   - ticker: XLV
     theme: ヘルスケア
-    label: ヘルスケア
+    label: ヘルスケア大型株
+  - ticker: VHT
+    theme: ヘルスケア
+    label: ヘルスケア全体
+  - ticker: IYH
+    theme: ヘルスケア
+    label: 米国ヘルスケア
+  - ticker: IHI
+    theme: ヘルスケア
+    label: 医療機器
+  - ticker: XBI
+    theme: ヘルスケア
+    label: バイオ株
+  - ticker: IBB
+    theme: ヘルスケア
+    label: 大型バイオ
+  - ticker: ARKG
+    theme: ヘルスケア
+    label: ゲノム・先端医療
   - ticker: XLI
     theme: 資本財
     label: 資本財
