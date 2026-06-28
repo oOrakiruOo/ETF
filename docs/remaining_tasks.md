@@ -5,7 +5,7 @@
 
 ## 現在地
 
-- 全体進捗: 約99.9%
+- 全体進捗: 約99.95%
 - 本運用前の安定化: 実装完了寄り
 - PCオフ運用: GitHub Actionsで実証済み
 - 日次LINE通知: schedule実行で連続成功中
@@ -32,6 +32,8 @@
 - Codex軽量タスクテンプレ追加
 - 日次/週次クラウドartifact確認
 - LINE返信/Webhook機能の削除
+- schedule専用クラウド確認コマンド
+- クラウド確認の鮮度チェック
 
 ## 残タスク
 
@@ -41,7 +43,7 @@
    - schedule実行の連続成功を確認済み
    - LINE返信/Webhook削除後のworkflow_dispatch成功を確認済み
    - 判断ブリーフ送信ログHTTP 200を確認済み
-   - LINE返信/Webhook削除後の次回scheduleだけ最終観察
+   - `.\scripts\check_go_live_cloud.ps1 -ScheduleOnly -MaxAgeHours 168` で最終観察
 
 2. 初回の週次クラウドPDCA確認
    - `Weekly ETF PDCA` の手動実行は成功済み
@@ -50,7 +52,7 @@
    - 週次LINE要約送信ログを確認済み
    - LINE返信/Webhook削除後のworkflow_dispatch成功を確認済み
    - 週次LINE要約送信ログHTTP 200を確認済み
-   - LINE返信/Webhook削除後の次回scheduleだけ最終観察
+   - `.\scripts\check_go_live_cloud.ps1 -ScheduleOnly -MaxAgeHours 168` で最終観察
 
 3. 1週間運用後の自己確認反映
    - 必要な日だけ `self-check` で手動記録
@@ -78,6 +80,12 @@
 3. 1週間分の自己確認が週次PDCAに反映される
 4. `scripts/check_cloud_delivery.ps1 -DownloadLatestArtifact` で日次成果物を確認できる（手動実行分は確認済み）
 5. `scripts/check_cloud_delivery.ps1 -Weekly -DownloadLatestArtifact` で週次成果物を確認できる（手動実行分は確認済み）
+
+最終確認コマンド:
+
+```powershell
+.\scripts\check_go_live_cloud.ps1 -ScheduleOnly -MaxAgeHours 168
+```
 
 ## 当面の最優先
 
