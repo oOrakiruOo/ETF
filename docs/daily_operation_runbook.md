@@ -32,6 +32,12 @@
 .\scripts\check_go_live_cloud.ps1 -DownloadArtifacts
 ```
 
+自動scheduleだけを確認する場合は、以下を使います。
+
+```powershell
+.\scripts\check_go_live_cloud.ps1 -ScheduleOnly
+```
+
 GitHub Actionsの最新結果を確認する場合は、以下を使います。
 
 ```powershell
