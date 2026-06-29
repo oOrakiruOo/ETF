@@ -628,12 +628,64 @@ def _holding_name(row: dict[str, object]) -> str:
 
 def _action_label_meaning(action_label: str) -> str:
     meanings = {
-        "🔴 DEFENSE": "危険だから買わない。資金を守る日。",
-        "🟡 WAIT": "危険ではないが条件未達。買い場を待つ日。",
+        "🔴 DEFENSE": "大きく負ける買い方を避け、資金を守る日。",
+        "🟡 WAIT": "条件未達。何もしないことで次の買い場を待つ日。",
         "🟢 CHECK BUY": "候補あり。価格と保有比率を手動確認する日。",
         "🟣 CHECK SELL": "新規買いより保有の利確/売却確認を優先する日。",
     }
     return meanings.get(action_label, "自己判断のために確認する日。")
+
+
+def _loss_prevention_lines(
+    action_label: str,
+    *,
+    defense: bool,
+    has_buy: bool,
+    has_core_recovery: bool,
+    has_sell_check: bool,
+) -> list[str]:
+    lines = [
+        "最優先: 大きく負ける買い方を避ける。",
+    ]
+    if defense:
+        lines.append("DEFENSE中は買い場探しより資金温存を優先。")
+        if has_core_recovery:
+            lines.append("コア例外は少額・分割・夜の再確認だけ。")
+            lines.append("サテライト候補が近くても解除までは実行しない。")
+        else:
+            lines.append("候補が近くても解除までは実行しない。")
+    elif action_label == "🟡 WAIT":
+        lines.append("WAITは機会損失ではなく、条件未達で買わない判断。")
+        lines.append("買えない日を明確にすることがこの通知の価値。")
+    elif has_sell_check:
+        lines.append("新規買いより、過熱・失速の確認を優先。")
+        lines.append("保有を守れない状態で買い足さない。")
+    elif has_buy or has_core_recovery:
+        lines.append("買う場合も一括ではなく分割。")
+        lines.append("夜の価格と保有比率を確認してから判断。")
+    else:
+        lines.append("迷う日は買わない。次の条件到達を待つ。")
+    return lines
+
+
+def _pre_trade_check_lines(
+    *,
+    defense: bool,
+    has_buy: bool,
+    has_core_recovery: bool,
+) -> list[str]:
+    lines = [
+        "夜の価格が朝の判定から大きくズレていないか確認。",
+        "一括買いしない。分割・少額を優先。",
+        "サテライト比率の上限を超えない。",
+    ]
+    if defense and has_core_recovery:
+        lines.insert(0, "コア例外以外の新規買いは実行しない。")
+    elif defense:
+        lines.insert(0, "DEFENSE解除前は新規買いを実行しない。")
+    elif not has_buy and not has_core_recovery:
+        lines.insert(0, "買い候補がない日は確認だけで終える。")
+    return lines
 
 
 def _modern_market_guard_lines(
@@ -912,6 +964,18 @@ def write_decision_brief(
                         )
     modern_guard_lines = _modern_market_guard_lines(signal_table, portfolio)
     future_guard_lines = _future_action_guard_lines(signal_table, market_score, defense)
+    loss_prevention_lines = _loss_prevention_lines(
+        action_label,
+        defense=defense,
+        has_buy=has_buy,
+        has_core_recovery=has_core_recovery,
+        has_sell_check=has_sell_check,
+    )
+    pre_trade_check_lines = _pre_trade_check_lines(
+        defense=defense,
+        has_buy=has_buy,
+        has_core_recovery=has_core_recovery,
+    )
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -949,6 +1013,12 @@ def write_decision_brief(
     lines.extend([
         "今日やること:",
         *today_actions,
+        "",
+        "負けない運用:",
+        *loss_prevention_lines,
+        "",
+        "売買前チェック:",
+        *pre_trade_check_lines,
         "",
         "ルール破り防止:",
         *mistake_guard_lines,

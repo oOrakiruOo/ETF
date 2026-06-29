@@ -197,6 +197,12 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "✅ 市場リスク対象を確認: SMH（半導体ETF）" in text
     assert "❌ 新規買いは見送り" in text
     assert "❌ ナンピン禁止" in text
+    assert "負けない運用:" in text
+    assert "最優先: 大きく負ける買い方を避ける。" in text
+    assert "新規買いより、過熱・失速の確認を優先。" in text
+    assert "売買前チェック:" in text
+    assert "夜の価格が朝の判定から大きくズレていないか確認。" in text
+    assert "サテライト比率の上限を超えない。" in text
     assert "ルール破り防止:" in text
     assert "上がっても飛びつかない。" in text
     assert "下がってもナンピンしない。" in text
@@ -419,6 +425,10 @@ def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "🔴 DEFENSE" in text
     assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
+    assert "DEFENSE中は買い場探しより資金温存を優先。" in text
+    assert "コア例外は少額・分割・夜の再確認だけ。" in text
+    assert "サテライト候補が近くても解除までは実行しない。" in text
+    assert "コア例外以外の新規買いは実行しない。" in text
     assert "✅ コアだけ少額分割を手動検討: QQQ（ナスダック100・大型グロース）" in text
     assert "❌ サテライト新規買い禁止" in text
     assert "新規買い: コア分割のみ確認" in text
@@ -742,7 +752,9 @@ def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "🟡 WAIT" in text
     assert "結論: 何もしない。条件が来るまで待つ。" in text
-    assert "危険ではないが条件未達。買い場を待つ日。" in text
+    assert "条件未達。何もしないことで次の買い場を待つ日。" in text
+    assert "WAITは機会損失ではなく、条件未達で買わない判断。" in text
+    assert "買えない日を明確にすることがこの通知の価値。" in text
     assert "❌ 新規買いは見送り" in text
 
 
