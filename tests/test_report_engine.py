@@ -192,55 +192,22 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "/100" in text
     assert "🟣 CHECK SELL" in text
     assert "結論: 新規買いは見送り。保有ETFだけ確認。" in text
-    assert "今日は新規買いより、保有ETFの確認を優先。" in text
     assert "今日やること:" in text
     assert "✅ 市場リスク対象を確認: SMH（半導体ETF）" in text
+    assert "やらないこと:" in text
     assert "❌ 新規買いは見送り" in text
     assert "❌ ナンピン禁止" in text
-    assert "負けない運用:" in text
-    assert "最優先: 大きく負ける買い方を避ける。" in text
-    assert "新規買いより、過熱・失速の確認を優先。" in text
-    assert "売買前チェック:" in text
-    assert "夜の価格が朝の判定から大きくズレていないか確認。" in text
-    assert "サテライト比率の上限を超えない。" in text
-    assert "ルール破り防止:" in text
-    assert "上がっても飛びつかない。" in text
-    assert "下がってもナンピンしない。" in text
-    assert "今日の自己確認:" in text
-    assert "LINE返信での記録は使わない。" in text
-    assert "必要な場合だけ self-check で手動記録。" in text
-    assert "例: self-check broke / SOFIを見て買いたくなった" in text
-    assert "週次PDCAで原因確認。" in text
-    assert "新規買い: なし" in text
-    assert "コア買い: 待ち" in text
-    assert "サテライト買い: 待ち" in text
-    assert "利確/売却確認: あり" in text
-    assert "保有サマリー:" in text
-    assert "評価額合計: 3,020,000円" in text
-    assert "NISA オルカン: 18.0%" in text
-    assert "保有の扱い:" in text
-    assert "QQQ: ETF信号対象" in text
-    assert "NISA オルカン: コア資産" in text
-    assert "SOFI: ETF信号の参考外" in text
-    assert "参考保有の注意:" in text
-    assert "参考保有合計: 11.0%" in text
-    assert "最大: SOFI 11.0%" in text
-    assert "SOFI: 11.0% / 保有継続 / 通常監視" in text
-    assert "ETF信号とは別枠。買い増しはETF通知で判断しない。" in text
-    assert "参考保有はETF通知で買い増ししない。" in text
-    assert "次の買い候補:" in text
+    assert "確認:" in text
+    assert "買い候補: なし" in text
+    assert "売却/利確確認: SMH（半導体ETF）" in text
+    assert "次の監視: VT（全世界株式）" in text
     assert "VT（全世界株式）" in text
-    assert "状態: 買い条件まで中距離 / あと2.0%" in text
-    assert "ステージ: S4 過熱期" in text
-    assert "買いシグナル発生まで" in text
-    assert "中距離（目安3〜12日）" in text
-    assert "VT/VTI/SPY/QQQは待ち。" in text
-    assert "テーマETFの新規買い候補なし。" in text
-    assert "状態: S4 過熱期" in text
-    assert "ステージ説明:" in text
-    assert "確認: 利確候補" in text
-    assert "買い増ししない。保有継続/一部利確を手動確認。" in text
-    assert "※これは投資助言ではありません。" in text
+    assert "買いシグナル目安: 中距離（目安3〜12日）" in text
+    assert "理由:" in text
+    assert "詳細は日次レポートで確認。" in text
+    assert "保有サマリー:" not in text
+    assert "ステージ説明:" not in text
+    assert "※投資助言ではありません。" in text
 
 
 def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
@@ -280,8 +247,7 @@ def test_write_decision_brief_warns_when_data_is_stale(tmp_path) -> None:
     )
     text = output_path.read_text(encoding="utf-8")
     assert "⚠️ DATA STALE" in text
-    assert "最新シグナルは2026-06-18（2日前）" in text
-    assert "この通知は新規売買判断に使わないでください。" in text
+    assert "新規売買判断に使わない。" in text
 
 
 def test_write_decision_brief_adds_japanese_labels_and_healthcare_watch(tmp_path) -> None:
@@ -359,13 +325,11 @@ def test_write_decision_brief_adds_japanese_labels_and_healthcare_watch(tmp_path
         report_date=datetime(2026, 6, 20),
     )
     text = output_path.read_text(encoding="utf-8")
-    assert "ヘルスケア監視:" in text
     assert "XLV（ヘルスケア大型株）" in text
     assert "XBI（バイオ株）" in text
     assert "ARKG（ゲノム・先端医療）" in text
-    assert "ステージ: S1 底固め・発見期" in text
-    assert "ステージ: S2 上昇初動・成長期" in text
-    assert "高ボラ枠。少額・分割のみ。" in text
+    assert "次の監視:" in text
+    assert "ヘルスケア監視:" not in text
 
 
 def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> None:
@@ -425,16 +389,10 @@ def test_write_decision_brief_shows_core_recovery_during_defense(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "🔴 DEFENSE" in text
     assert "結論: 積立だけ。新規買いとナンピンはしない。" in text
-    assert "DEFENSE中は買い場探しより資金温存を優先。" in text
-    assert "コア例外は少額・分割・夜の再確認だけ。" in text
-    assert "サテライト候補が近くても解除までは実行しない。" in text
-    assert "コア例外以外の新規買いは実行しない。" in text
     assert "✅ コアだけ少額分割を手動検討: QQQ（ナスダック100・大型グロース）" in text
     assert "❌ サテライト新規買い禁止" in text
-    assert "新規買い: コア分割のみ確認" in text
-    assert "コア分割買い: 候補あり" in text
-    assert "QQQ（ナスダック100・大型グロース）: コア分割買い検討 / 近い / 条件付近" in text
-    assert "サテライトはまだ待つ。" in text
+    assert "❌ DEFENSE解除前はサテライトを買わない。" in text
+    assert "買い候補: コア少額確認: QQQ（ナスダック100・大型グロース）" in text
     assert "SMH: コア分割買い検討" not in text
 
 
@@ -473,9 +431,8 @@ def test_write_decision_brief_shows_long_crash_core_probe(tmp_path) -> None:
 
     text = output_path.read_text(encoding="utf-8")
     assert "✅ コアだけ少額分割を手動検討: QQQ（ナスダック100・大型グロース）" in text
-    assert "新規買い: コア分割のみ確認" in text
-    assert "二番底リスクあり。試し玉以上に広げない。" in text
-    assert "QQQ（ナスダック100・大型グロース）: コア分割買い検討 / 中距離 / あと4.0%" in text
+    assert "買い候補: コア少額確認: QQQ（ナスダック100・大型グロース）" in text
+    assert "コアは少額分割の確認余地あり" in text
     assert "確認対象:\nQQQ" not in text
 
 
@@ -514,7 +471,7 @@ def test_write_decision_brief_excludes_far_core_recovery_candidate(tmp_path) -> 
 
     text = output_path.read_text(encoding="utf-8")
     assert "SPY: コア分割買い検討 / 遠い" not in text
-    assert "コア分割買い: 待ち" in text
+    assert "買い候補: なし" in text
 
 
 def test_write_decision_brief_warns_modern_concentration_risks(tmp_path) -> None:
@@ -584,11 +541,9 @@ def test_write_decision_brief_warns_modern_concentration_risks(tmp_path) -> None
     )
 
     text = output_path.read_text(encoding="utf-8")
-    assert "近年型リスク:" in text
-    assert "急騰テーマ注意: SMH（半導体ETF） は飛びつき禁止。" in text
-    assert "テーマ交代注意: VGT（米国テック大型株） はCore優先で確認。" in text
-    assert "AI/半導体集中注意: 追加は一括ではなく上限確認。" in text
-    assert "個別株誘惑注意: SOFI はETF信号で買い増ししない。" in text
+    assert "やらないこと:" in text
+    assert "❌ 参考個別株はETF通知で買い増ししない。" in text
+    assert "近年型リスク:" not in text
 
 
 def test_write_decision_brief_shows_future_action_guards(tmp_path) -> None:
@@ -709,11 +664,9 @@ def test_write_decision_brief_shows_future_action_guards(tmp_path) -> None:
     )
 
     text = output_path.read_text(encoding="utf-8")
-    assert "未来ショック備え:" in text
-    assert "流動性ショック想定: 新規買いより現金余力を優先。" in text
-    assert "金利ショック想定: 金融/債券/公益の連鎖リスクを確認。" in text
-    assert "AI集中相場想定: サテライト上限を超えて追わない。" in text
-    assert "急反発相場想定: 置いていかれ不安で成行買いしない。" in text
+    assert "未来ショック備え:" not in text
+    assert "買い候補:" in text
+    assert "売却/利確確認:" in text
 
 
 def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> None:
@@ -752,10 +705,9 @@ def test_write_decision_brief_explains_wait_as_condition_not_met(tmp_path) -> No
     text = output_path.read_text(encoding="utf-8")
     assert "🟡 WAIT" in text
     assert "結論: 何もしない。条件が来るまで待つ。" in text
-    assert "条件未達。何もしないことで次の買い場を待つ日。" in text
-    assert "WAITは機会損失ではなく、条件未達で買わない判断。" in text
-    assert "買えない日を明確にすることがこの通知の価値。" in text
     assert "❌ 新規買いは見送り" in text
+    assert "買い候補: なし" in text
+    assert "次の監視: QQQ（ナスダック100・大型グロース）" in text
 
 
 def test_write_weekly_line_summary_focuses_on_operation_discipline(tmp_path) -> None:
