@@ -688,6 +688,18 @@ def _pre_trade_check_lines(
     return lines
 
 
+def _compact_ticker_names(rows: pd.DataFrame, limit: int = 3) -> str:
+    if rows.empty:
+        return "なし"
+    return " / ".join(_ticker_label(item) for item in rows["ETF"].astype(str).head(limit).tolist())
+
+
+def _compact_reasons(reason_lines: list[str], limit: int = 3) -> list[str]:
+    if not reason_lines:
+        return ["特記事項なし"]
+    return reason_lines[:limit]
+
+
 def _modern_market_guard_lines(
     signal_table: pd.DataFrame,
     portfolio: pd.DataFrame | None = None,
@@ -977,192 +989,58 @@ def write_decision_brief(
         has_core_recovery=has_core_recovery,
     )
 
+    action_lines = today_actions[:4]
+    stop_lines = mistake_guard_lines[:2]
+    if defense:
+        stop_lines.insert(0, "DEFENSE解除前はサテライトを買わない。")
+    if reference_alert_lines:
+        stop_lines.append("参考個別株はETF通知で買い増ししない。")
+
+    buy_summary = "なし"
+    if has_buy:
+        buy_summary = _compact_ticker_names(pd.concat([core_buy, satellite_buy]), limit=3)
+    elif has_core_recovery:
+        buy_summary = f"コア少額確認: {_compact_ticker_names(core_recovery, limit=3)}"
+
+    sell_summary = _compact_ticker_names(risk_review, limit=3) if has_sell_check else "なし"
+    next_summary = _compact_ticker_names(watch_candidates, limit=3)
+
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
+        f"{action_label} 市場スコア {market_score}/100",
+        "",
+        f"結論: {conclusion_text}",
         "",
     ]
     if data_stale:
         lines.extend(
             [
                 "⚠️ DATA STALE",
-                data_stale_reason,
-                "この通知は新規売買判断に使わないでください。",
+                "新規売買判断に使わない。",
                 "",
             ]
         )
-    lines.extend([
-        "市場スコア",
-        f"{market_score}/100",
-        "",
-        action_label,
-        f"結論: {conclusion_text}",
-        action_text,
-        _action_label_meaning(action_label),
-        "",
-    ])
-    if defense and defense_streak_days is not None:
-        lines.extend(
-            [
-                "DEFENSE継続:",
-                f"{defense_streak_days}日",
-                "解除条件:",
-                "市場スコア36以上、リスク対象減少、過熱/失速の改善",
-                "",
-            ]
-        )
-    lines.extend([
-        "今日やること:",
-        *today_actions,
-        "",
-        "負けない運用:",
-        *loss_prevention_lines,
-        "",
-        "売買前チェック:",
-        *pre_trade_check_lines,
-        "",
-        "ルール破り防止:",
-        *mistake_guard_lines,
-        "",
-    ])
-    if modern_guard_lines:
-        lines.extend(["近年型リスク:", *modern_guard_lines, ""])
-    if future_guard_lines:
-        lines.extend(["未来ショック備え:", *future_guard_lines, ""])
-    lines.extend([
-        "今日の自己確認:",
-        "LINE返信での記録は使わない。",
-        "必要な場合だけ self-check で手動記録。",
-        "例: self-check broke / SOFIを見て買いたくなった",
-        "週次PDCAで原因確認。",
-        "",
-        "買い判断:",
-        f"新規買い: {'あり' if has_buy else 'コア分割のみ確認' if has_core_recovery else 'なし'}",
-        f"コア買い: {'候補あり' if not core_buy.empty else '待ち'}",
-        f"コア分割買い: {'候補あり' if has_core_recovery else '待ち'}",
-        f"サテライト買い: {'候補あり' if not satellite_buy.empty else '待ち'}",
-        f"利確/売却確認: {'あり' if has_sell_check else 'なし'}",
-        "",
-    ])
-    if portfolio_summary_lines:
-        lines.extend(["保有サマリー:", *portfolio_summary_lines, ""])
-    if portfolio_signal_lines or portfolio_reference_lines:
-        lines.extend(["保有の扱い:"])
-        if portfolio_signal_lines:
-            lines.extend(portfolio_signal_lines[:4])
-        if portfolio_reference_lines:
-            lines.extend(portfolio_reference_lines[:4])
-        lines.append("")
-    if reference_alert_lines:
-        lines.extend(
-            [
-                "参考保有の注意:",
-                f"参考保有合計: {reference_total_weight:.1f}%",
-                f"最大: {reference_top_name} {reference_top_weight:.1f}%",
-                *reference_alert_lines[:4],
-                "ETF信号とは別枠。買い増しはETF通知で判断しない。",
-                "",
-            ]
-        )
-    healthcare_watch = signal_table[
-        signal_table["ETF"].astype(str).str.upper().isin(HEALTHCARE_WATCH_TICKERS)
-    ].copy()
-    if not healthcare_watch.empty:
-        lines.extend(["ヘルスケア監視:"])
-        for row in healthcare_watch.head(5).to_dict("records"):
-            ticker = _ticker_symbol(row.get("ETF"))
-            if ticker in {"XLV", "VHT", "IYH"}:
-                judgement = "守備的な次候補。半導体から資金が抜ける場合に確認。"
-            elif ticker in {"XBI", "ARKG"}:
-                judgement = "高ボラ枠。少額・分割のみ。"
-            else:
-                judgement = "成長寄り候補。DEFENSE時は買わない。"
-            lines.extend(
-                [
-                    _ticker_label(row.get("ETF")),
-                    f"ステージ: {_stage_display(row.get('ステージ'))}",
-                    f"判断: {judgement}",
-                ]
-            )
-        lines.append("")
-    lines.extend([
-        "次の買い候補:",
-    ])
-    if watch_candidates.empty:
-        lines.append("なし")
-    else:
-        for row in watch_candidates.to_dict("records"):
-            lines.append(f"{_ticker_label(row.get('ETF'))}")
-            lines.append(f"状態: 買い条件まで{_buy_distance_detail(row)}")
-            lines.append(f"ステージ: {_stage_display(row.get('ステージ'))}")
-            decision_text = "DEFENSE解除まで待ち" if defense else _stage_action(row.get("ステージ"))
-            lines.append(f"判断: {decision_text}")
     lines.extend(
         [
+            "今日やること:",
+            *action_lines,
             "",
-            "買いシグナル発生まで",
-            distance_text,
+            "やらないこと:",
+            *[f"❌ {line}" if not line.startswith("❌") else line for line in stop_lines[:4]],
             "",
+            "確認:",
+            f"買い候補: {buy_summary}",
+            f"売却/利確確認: {sell_summary}",
+            f"次の監視: {next_summary}",
+            f"買いシグナル目安: {distance_text}",
+            "",
+            "理由:",
+            *[f"・{reason}" for reason in _compact_reasons(reason_lines)],
+            "",
+            "詳細は日次レポートで確認。",
+            "※投資助言ではありません。最終判断はご自身で。",
         ]
     )
-    lines.extend([
-        "コア:",
-    ])
-    if has_core_recovery:
-        lines.append("暴落後の回復確認。買う場合も一括ではなく少額分割。")
-        lines.append("二番底リスクあり。試し玉以上に広げない。")
-        for row in core_recovery.to_dict("records"):
-            lines.append(f"{_ticker_label(row.get('ETF'))}: コア分割買い検討 / {_buy_distance_detail(row)}")
-        lines.append("サテライトはまだ待つ。")
-    elif core_buy.empty and core_wait.empty:
-        lines.append("VT/VTI/SPY/QQQは待ち。")
-        lines.append("積立は通常ルール優先。")
-    for row in pd.concat([core_buy, core_wait]).head(4).to_dict("records"):
-        lines.append(_format_signal_row(row))
-
-    lines.extend(["", "サテライト:"])
-    if satellite_buy.empty and satellite_wait.empty:
-        lines.append("テーマETFの新規買い候補なし。")
-        lines.append("過熱・失速銘柄は買い増ししない。")
-    for row in pd.concat([satellite_buy, satellite_wait]).head(6).to_dict("records"):
-        lines.append(_format_signal_row(row))
-
-    if has_sell_check:
-        lines.append("")
-        lines.append("確認対象:")
-        for row in risk_review.head(4).to_dict("records"):
-            ticker = _ticker_label(row.get("ETF"))
-            signal = _mobile_value(row.get("判定"))
-            stage = _stage_display(row.get("ステージ"))
-            if signal == "利確候補":
-                action = "買い増ししない。保有継続/一部利確を手動確認。"
-            elif signal == "売却候補":
-                action = "新規買いしない。保有継続可否を手動確認。"
-            else:
-                action = "リスクを手動確認。"
-            lines.extend([ticker, f"状態: {stage}", f"確認: {signal}", f"行動: {action}", ""])
-        if lines[-1] == "":
-            lines.pop()
-
-    lines.extend(["", "理由:"])
-    lines.extend([f"・{reason}" for reason in reason_lines[:4]])
-
-    if has_sell_check:
-        lines.extend(["", "詳細:"])
-        for row in risk_review.head(4).to_dict("records"):
-            lines.append(_short_detail(row))
-
-    lines.extend(
-        [
-            "",
-            "ステージ説明:",
-            "S1 底固め・発見期: 監視開始。大きく買わない。",
-            "S2 上昇初動・成長期: 買い候補。分割買い候補。",
-            "S3 人気化・保有期: 保有中心。新規買いは慎重。",
-            "S4 過熱期: 買い増し禁止。一部利確候補。",
-            "S5 失速期: 新規買い禁止。売却・縮小候補。",
-        ]
-    )
-    lines.extend(["", "※これは投資助言ではありません。最終判断はご自身で行ってください。"])
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return output_path
 
