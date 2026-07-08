@@ -35,6 +35,7 @@ def load_price_data(
     interval: str = "1d",
     cache_dir: str | Path = "data/raw",
     refresh: bool = False,
+    source_status_path: str | Path = DATA_SOURCE_STATUS_PATH,
 ) -> dict[str, pd.DataFrame]:
     cache_root = PROJECT_ROOT / cache_dir if not Path(cache_dir).is_absolute() else Path(cache_dir)
     cache_root.mkdir(parents=True, exist_ok=True)
@@ -72,7 +73,7 @@ def load_price_data(
             }
         )
         results[ticker] = frame.sort_index()
-    _write_data_source_status(source_rows)
+    _write_data_source_status(source_rows, source_status_path)
     return results
 
 

@@ -51,12 +51,33 @@ def test_write_daily_report_shows_compact_score_ranking(tmp_path) -> None:
     output_path = write_daily_report(
         signal_table,
         {"半導体": 75.0},
+        stock_signals=pd.DataFrame(
+            [
+                {
+                    "symbol": "9101.T",
+                    "signal_name": "NYK_SELL_OFF_REBOUND_CANDIDATE",
+                    "status": "active",
+                    "trigger_date": "2026-07-07",
+                    "entry_watch_date": "2026-07-08",
+                    "expected_hold_days": 20,
+                    "ten_day_return": -12.0,
+                    "bullish_candle": True,
+                    "close_vs_200ma": "below",
+                    "confidence": "watch_only",
+                    "action": "monitor_only",
+                    "note": "ETF主判断は上書きしない。",
+                }
+            ]
+        ),
         output_dir=tmp_path,
         report_date=datetime(2026, 6, 18),
     )
     text = output_path.read_text(encoding="utf-8")
     assert "## 4. ETFスコアランキング 要約" in text
     assert "## 4b. ETFスコアランキング 詳細" in text
+    assert "## 10b. 個別株シグナル" in text
+    assert "ETF主判断を上書きしない補助シグナルです。" in text
+    assert "NYK_SELL_OFF_REBOUND_CANDIDATE" in text
     summary_text = text.split("## 4b. ETFスコアランキング 詳細")[0]
     assert "テーマリスク理由" not in summary_text
 
@@ -182,6 +203,17 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
                 },
             ]
         ),
+        stock_signals=pd.DataFrame(
+            [
+                {
+                    "symbol": "9101.T",
+                    "rule_label": "9101急落後リバウンド候補",
+                    "signal_name": "NYK_SELL_OFF_REBOUND_CANDIDATE",
+                    "status": "active",
+                    "action": "monitor_only",
+                }
+            ]
+        ),
         defense_streak_days=3,
         output_dir=tmp_path,
         report_date=datetime(2026, 6, 19),
@@ -201,6 +233,7 @@ def test_write_decision_brief_focuses_on_buy_timing(tmp_path) -> None:
     assert "買い候補: なし" in text
     assert "売却/利確確認: SMH（半導体ETF）" in text
     assert "次の監視: VT（全世界株式）" in text
+    assert "個別株シグナル: 9101.T 9101急落後リバウンド候補 (monitor_only)" in text
     assert "VT（全世界株式）" in text
     assert "買いシグナル目安: 中距離（目安3〜12日）" in text
     assert "理由:" in text
