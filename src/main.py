@@ -104,6 +104,7 @@ from .report_engine import (
 )
 from .risk_engine import calculate_trade_plan
 from .signal_engine import apply_theme_risk_overlay, decide_signal
+from .stock_signal_engine import evaluate_stock_signals, stock_signal_symbols, write_stock_signal_outputs
 from .theme_engine import assess_theme_rotation_risks, calculate_theme_scores, classify_theme_stage
 from .utils import PROJECT_ROOT, load_yaml, setup_logging
 
@@ -166,16 +167,26 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
     logger = logging.getLogger(__name__)
     settings = load_yaml("config/settings.yaml")
     universe = load_yaml("config/etf_universe.yaml")
+    stock_signal_config = load_yaml("config/stock_signal_rules.yaml")
     theme_map_config = load_yaml("config/theme_map.yaml")
     theme_risk_mode = theme_risk_overlay_mode_from_settings(settings)
     trade_plan_multipliers = trade_plan_multipliers_from_settings(settings)
     strategy_config, _description = load_strategy_config(profile_name)
     entries = flatten_universe(universe)
     tickers = sorted({entry["ticker"] for entry in entries} | {"SPY", "QQQ"})
+    stock_tickers = stock_signal_symbols(stock_signal_config)
     period = str(settings["data"].get("period", "10y"))
     interval = str(settings["data"].get("interval", "1d"))
     logger.info("Loading price data for %s", ", ".join(tickers))
     raw_data = load_price_data(tickers, period=period, interval=interval, refresh=refresh)
+    stock_raw_data = load_price_data(
+        stock_tickers,
+        period=period,
+        interval=interval,
+        cache_dir="data/raw/stocks",
+        refresh=refresh,
+        source_status_path="data/processed/stock_data_source_status.csv",
+    ) if stock_tickers else {}
     qqq_close = raw_data["QQQ"]["Adj Close"]
     spy_close = raw_data["SPY"]["Adj Close"]
     enriched = {
@@ -229,6 +240,7 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
             }
         )
     table = build_signal_table(rows)
+    stock_signals = evaluate_stock_signals(stock_raw_data, stock_signal_config)
     current_prices = {ticker: metrics["price"] for ticker, metrics in metrics_by_ticker.items() if "price" in metrics}
     portfolio = evaluate_portfolio_actions(update_portfolio_prices(load_portfolio(), current_prices))
     output_path = write_daily_report(
@@ -237,6 +249,7 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
         allocation_text_from_config(strategy_config),
         portfolio=portfolio,
         theme_risk_table=theme_risk_table,
+        stock_signals=stock_signals,
     )
     notifications = pd.concat(
         [build_notification_candidates(table), build_portfolio_notification_candidates(portfolio)],
@@ -245,14 +258,17 @@ def run_daily(refresh: bool = False, profile_name: str = DEFAULT_STRATEGY_PROFIL
     notification_path = write_notification_report(notifications)
     notification_outbox_path = write_notification_outbox(notifications)
     signal_snapshot_path = write_signal_snapshot(table)
+    stock_signal_csv_path, stock_signal_json_path = write_stock_signal_outputs(stock_signals, stock_signal_config)
     logger.info("Daily report written: %s", output_path)
     logger.info("Notification candidates written: %s", notification_path)
     logger.info("Notification outbox written: %s", notification_outbox_path)
     logger.info("Signal snapshot written: %s", signal_snapshot_path)
+    logger.info("Stock signals written: %s / %s", stock_signal_csv_path, stock_signal_json_path)
     print(f"日次レポートを作成しました: {output_path}")
     print(f"通知候補を作成しました: {notification_path}")
     print(f"通知アウトボックスを作成しました: {notification_outbox_path}")
     print(f"シグナル履歴を保存しました: {signal_snapshot_path}")
+    print(f"個別株シグナルを保存しました: {stock_signal_csv_path}")
 
 
 def numeric_metrics_from_row(row: pd.Series) -> dict[str, float]:
@@ -1069,6 +1085,13 @@ def _latest_signals_path() -> tuple[datetime, str]:
     return report_date, str(latest)
 
 
+def _latest_stock_signals(report_date: datetime) -> pd.DataFrame:
+    path = PROJECT_ROOT / "data" / "processed" / "stock_signals" / f"stock_signals_{report_date:%Y-%m-%d}.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
 def _write_latest_mobile_summary() -> str:
     report_date, signals_path = _latest_signals_path()
     signal_table = pd.read_csv(signals_path)
@@ -1120,6 +1143,7 @@ def _load_latest_signal_context() -> tuple[datetime, pd.DataFrame, pd.DataFrame]
 
 def _write_latest_decision_brief() -> str:
     report_date, signal_table, readiness = _load_latest_signal_context()
+    stock_signals = _latest_stock_signals(report_date)
     current_prices = dict(zip(signal_table["ETF"], signal_table["現在価格"], strict=False)) if not signal_table.empty else {}
     portfolio = evaluate_portfolio_actions(update_portfolio_prices(load_portfolio(), current_prices))
     recent_labels = build_action_label_by_snapshot(load_recent_signal_history())
@@ -1136,6 +1160,7 @@ def _write_latest_decision_brief() -> str:
         signal_table,
         readiness=readiness,
         portfolio=portfolio,
+        stock_signals=stock_signals,
         defense_streak_days=defense_streak_days,
         report_date=report_date,
     )

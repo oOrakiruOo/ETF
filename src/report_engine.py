@@ -57,6 +57,7 @@ def write_daily_report(
     allocation_text: str = "Core 60% / Satellite 25% / Cash 15%",
     portfolio: pd.DataFrame | None = None,
     theme_risk_table: pd.DataFrame | None = None,
+    stock_signals: pd.DataFrame | None = None,
     output_dir: str | Path = "reports/daily",
     report_date: datetime | None = None,
 ) -> Path:
@@ -95,6 +96,24 @@ def write_daily_report(
         risk_path.parent.mkdir(parents=True, exist_ok=True)
         theme_risk_table.to_csv(risk_path, index=False)
         theme_risk_text = theme_risk_table.head(15).to_markdown(index=False)
+    stock_signal_text = "該当なし"
+    if stock_signals is not None and not stock_signals.empty:
+        visible_stock_columns = [
+            "symbol",
+            "signal_name",
+            "status",
+            "trigger_date",
+            "entry_watch_date",
+            "expected_hold_days",
+            "ten_day_return",
+            "bullish_candle",
+            "close_vs_200ma",
+            "confidence",
+            "action",
+            "note",
+        ]
+        existing_stock_columns = [column for column in visible_stock_columns if column in stock_signals.columns]
+        stock_signal_text = stock_signals.loc[:, existing_stock_columns].to_markdown(index=False)
     score_summary_columns = [column for column in SCORE_SUMMARY_COLUMNS if column in signal_table.columns]
     score_summary = signal_table.loc[:, score_summary_columns].head(12) if score_summary_columns else pd.DataFrame()
     content = [
@@ -132,6 +151,11 @@ def write_daily_report(
         "",
         "## 10. テーマ交代リスクと予防策",
         theme_risk_text,
+        "",
+        "## 10b. 個別株シグナル",
+        "ETF主判断を上書きしない補助シグナルです。買い推奨、売り、空売りには使いません。",
+        "",
+        stock_signal_text,
         "",
         "## 11-13. 価格差・目標価格・RR・今日やること",
         "上表の第1買いまで%、保守目標、強気目標、停止価格、RRを確認し、条件到達時のみMASATOが最終判断します。",
@@ -791,6 +815,7 @@ def write_decision_brief(
     signal_table: pd.DataFrame,
     readiness: pd.DataFrame | None = None,
     portfolio: pd.DataFrame | None = None,
+    stock_signals: pd.DataFrame | None = None,
     defense_streak_days: int | None = None,
     output_dir: str | Path = "reports/daily",
     report_date: datetime | None = None,
@@ -1004,6 +1029,15 @@ def write_decision_brief(
 
     sell_summary = _compact_ticker_names(risk_review, limit=3) if has_sell_check else "なし"
     next_summary = _compact_ticker_names(watch_candidates, limit=3)
+    active_stock_signals = pd.DataFrame()
+    if stock_signals is not None and not stock_signals.empty and "status" in stock_signals.columns:
+        active_stock_signals = stock_signals[stock_signals["status"].astype(str).eq("active")]
+    stock_signal_summary = "なし"
+    if not active_stock_signals.empty:
+        stock_signal_summary = " / ".join(
+            f"{row.get('symbol')} {row.get('rule_label') or row.get('signal_name')} ({row.get('action')})"
+            for row in active_stock_signals.head(3).to_dict("records")
+        )
 
     lines = [
         f"ETF Rotation Daily {date:%Y-%m-%d}",
@@ -1032,6 +1066,7 @@ def write_decision_brief(
             f"買い候補: {buy_summary}",
             f"売却/利確確認: {sell_summary}",
             f"次の監視: {next_summary}",
+            f"個別株シグナル: {stock_signal_summary}",
             f"買いシグナル目安: {distance_text}",
             "",
             "理由:",

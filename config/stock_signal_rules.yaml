@@ -1,0 +1,26 @@
+rules:
+  - symbol: 9101.T
+    company_name: 日本郵船
+    signal_name: NYK_SELL_OFF_REBOUND_CANDIDATE
+    rule_label: 9101急落後リバウンド候補
+    lookback_days: 10
+    selloff_return_threshold_pct: -10.0
+    expected_hold_days: 20
+    confidence: watch_only
+    action: monitor_only
+    note: 10営業日-10%以上急落後の陽線。リバウンド候補だが、ETF主判断は上書きしない。
+    metadata:
+      source_report: C:\Users\ms-it\Documents\Codex\2026-07-09\9101-9101-3-9101-9104-9107\outputs\nyk_9101_rigorous_report.md
+      validation_period: 2004-11-05 to 2026-07-07
+      rule_id: selloff_10d_-10pct_bullish_candle_hold_20d
+      trades: 44
+      total_return_pct: 259.0
+      profit_factor: 2.29
+      max_drawdown_pct: -31.7
+      return_2010_2019_pct: 53.6
+      return_2020_2026_pct: 65.4
+      return_ex_2021_2022_shipping_bubble_pct: 146.3
+      bootstrap_mean_return_5pct: 0.74
+      sign_test_p_value: 0.049
+      scope: 9101.T固有候補。9104・9107へ完全再現したルールとして扱わない。
+      exclusions: 配当権利前後、月別季節性、決算後反応、信用売りは単独採用しない。
