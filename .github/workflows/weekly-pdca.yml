@@ -2,8 +2,6 @@ name: Weekly ETF PDCA
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "10 23 * * 5"
 
 permissions:
   contents: read

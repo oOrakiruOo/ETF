@@ -2,8 +2,6 @@ name: Daily ETF LINE
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "55 22 * * 0-4"
 
 permissions:
   contents: read
